@@ -25,6 +25,7 @@ header{display:flex;align-items:center;gap:6px;padding:0 10px;background:var(--p
 .btn.pri{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .btn.sm{padding:2px 7px;font-size:12px}
 .btn.icon{padding:5px 8px}
+.btn:disabled{opacity:.5;cursor:default}
 .sep{width:1px;height:22px;background:var(--line);margin:0 2px}
 #main{display:grid;grid-template-columns:230px 1fr 300px;min-height:0}
 aside{background:var(--panel);overflow:auto;min-height:0}
@@ -39,7 +40,7 @@ h4:first-child{margin-top:0}
 .tool kbd{margin-left:auto;font:10px ui-monospace,monospace;color:var(--mut)}
 .tool svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none}
 .search{position:relative;margin-bottom:6px}
-#symsearch{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 26px 6px 8px;background:var(--panel)}
+#symsearch{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 26px 6px 8px;background:var(--panel);-webkit-appearance:none;appearance:none}
 .search kbd{position:absolute;right:7px;top:7px;font:10px ui-monospace,monospace;color:var(--mut)}
 .symcat{font-size:11px;color:var(--mut);margin:10px 0 4px}
 .symgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
@@ -63,6 +64,8 @@ mark{background:rgba(217,119,6,.22);color:inherit;border-radius:2px}
 #gItems *,#gFrame *{pointer-events:none}
 #gItems .hit{pointer-events:all;fill:transparent;stroke:transparent}
 #gItems polyline.hit{pointer-events:stroke;fill:none}
+#gBlocks rect{fill:transparent;stroke:none;pointer-events:all;cursor:move}
+#svg.notsel #gBlocks rect{pointer-events:none}
 text{stroke:none;fill:#111;font-family:Arial,Helvetica,sans-serif;white-space:pre}
 .it.warn *:not(.hit){stroke:var(--warn)}
 .it.warn text{fill:var(--warn)}
@@ -72,6 +75,8 @@ text{stroke:none;fill:#111;font-family:Arial,Helvetica,sans-serif;white-space:pr
 .it.sel text:not(.hit),.it.warn text:not(.hit){stroke:none}
 #gSel rect.box{fill:none;stroke:var(--sel);stroke-dasharray:1.5 1;pointer-events:none}
 #gSel .vh{fill:#fff;stroke:var(--sel);cursor:move}
+#gSel .sh{fill:var(--sel);stroke:#fff}
+#gSel .lh{fill:#e0522d;stroke:#fff;cursor:move}
 #gDraft *{stroke:var(--sel)}
 #gDraft .marq{fill:rgba(30,107,214,.07);stroke:var(--sel);stroke-dasharray:2 1}
 #gDraft .snapdot{fill:none;stroke:#e0522d}
@@ -97,19 +102,22 @@ text{stroke:none;fill:#111;font-family:Arial,Helvetica,sans-serif;white-space:pr
 .hint{color:var(--mut);font-size:12px}
 .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 .box{border:1px solid var(--line);border-radius:6px;padding:8px;margin:6px 0}
-.warnbox{border-color:var(--warn);color:var(--warn)}
+.warnbox{border-color:var(--warn)}
+.warnbox>.t{color:var(--warn)}
+.chk{display:flex;gap:6px;align-items:center;margin:4px 0}
 footer{display:flex;align-items:center;gap:14px;padding:0 10px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden}
 footer label{display:flex;gap:4px;align-items:center;cursor:pointer}
 #hint{overflow:hidden;text-overflow:ellipsis}
 #finish{display:none}
-dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:0;width:min(520px,94vw);max-height:88vh}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:0;width:min(540px,94vw);max-height:88vh}
 dialog.wide{width:min(1180px,96vw)}
 dialog::backdrop{background:rgba(0,0,0,.35)}
 dialog .hd{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;display:flex;justify-content:space-between;align-items:center}
 dialog .bd{padding:14px 16px;overflow:auto;max-height:66vh}
 dialog .ft{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
-.filelist{border:1px solid var(--line);border-radius:6px;max-height:260px;overflow:auto;margin:8px 0}
-.filelist div{padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between}
+.lsth{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:12px 0 4px}
+.filelist{border:1px solid var(--line);border-radius:6px;max-height:240px;overflow:auto;margin:4px 0 8px}
+.filelist div{padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:8px}
 .filelist div:last-child{border-bottom:0}
 .filelist div:hover{background:var(--hov)}
 .ll{border-collapse:collapse;font-size:12px;width:100%}
@@ -143,12 +151,12 @@ dialog .ft{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:6
  <button class="btn icon mob" id="btnLeft" data-tip="Tools and symbols">☰</button>
  <div class="brand"><i></i>P&amp;ID</div>
  <div id="docname"></div>
- <button class="btn" id="btnFile" data-tip="<b>Open / new project</b><br>Projects from your GitHub repo, import or download a .md file">Open</button>
- <button class="btn pri" id="btnSave" data-tip="<b>Save</b> <kbd>Ctrl+S</kbd><br>Saves the project as .md to GitHub (or downloads it when GitHub is not set up)">Save</button>
+ <button class="btn" id="btnFile" data-tip="<b>Open / new project</b><br>Projects and templates from PID/Projects in your GitHub repo, or import / download a .md file">Open</button>
+ <button class="btn pri" id="btnSave" data-tip="<b>Save</b> <kbd>Ctrl+S</kbd><br>Saves the project as .md to PID/Projects on GitHub (or downloads it when GitHub is not set up)">Save</button>
  <span class="sep wide"></span>
  <button class="btn" id="btnLL" data-tip="<b>Line list</b><br>All lines with line no., size, medium, pipe class, from/to. Export to PDF or Excel.">Line list</button>
  <button class="btn" id="btnExport" data-tip="<b>Export drawing</b><br>PDF (all sheets as pages) or DXF">Export</button>
- <button class="btn icon" id="btnGh" data-tip="<b>GitHub storage</b><br>Repository, folder and access token">⚙</button>
+ <button class="btn icon" id="btnGh" data-tip="<b>GitHub storage</b><br>Repository and access token">⚙</button>
  <button class="btn icon mob" id="btnRight" data-tip="Properties">☷</button>
 </header>
 <div id="main">
@@ -156,7 +164,7 @@ dialog .ft{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:6
   <h4>Tools</h4>
   <div class="tools" id="tools"></div>
   <h4>Find symbol</h4>
-  <div class="search"><input id="symsearch" placeholder="e.g. solenoid, terugslagklep, PS…" data-tip="<b>Search</b> <kbd>Ctrl+F</kbd><br>Type what you need in English or Dutch. You get the recommended symbol, and matching tags or line numbers on the drawing."><kbd>⌃F</kbd></div>
+  <div class="search" role="search"><input id="symsearch" type="search" name="pid-symbol-query" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" aria-label="Find symbol" placeholder="e.g. solenoid, terugslagklep, PS…" data-tip="<b>Search</b> <kbd>Ctrl+F</kbd><br>Type what you need in English or Dutch. You get the recommended symbol, and matching tags or line numbers on the drawing."><kbd>⌃F</kbd></div>
   <div id="symlist"></div>
  </aside>
  <div id="wrap">
@@ -167,6 +175,7 @@ dialog .ft{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:6
    <rect id="paper" fill="#fff"/>
    <rect id="gridRect" fill="url(#grid)"/>
    <g id="gFrame"></g>
+   <g id="gBlocks"></g>
    <g id="gItems"></g>
    <g id="gSel"></g>
    <g id="gDraft"></g>
@@ -195,27 +204,45 @@ dialog .ft{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:6
  <div class="hd">Projects <button class="x" data-close>✕</button></div>
  <div class="bd">
   <div id="ghState" class="hint"></div>
-  <div class="filelist" id="filelist"></div>
+  <div id="ghSetup"></div>
+  <div id="tplWrap"></div>
+  <div id="prjWrap"></div>
   <div class="row">
-   <button class="btn" id="btnNew">New project</button>
+   <button class="btn" id="btnNew" data-tip="Blank project with the current company format">New project</button>
    <button class="btn" id="btnSaveAs">Save as…</button>
+   <button class="btn" id="btnSaveTpl" data-tip="Save the current project as a template in PID/Projects (name starts with Template)">Save as template…</button>
    <button class="btn" id="btnImport">Import .md</button>
    <button class="btn" id="btnDownload">Download .md</button>
-   <button class="btn" id="btnExample">Load example</button>
+   <button class="btn" id="btnExample" data-tip="A neutral demo drawing with two sheets">Load example</button>
   </div>
   <input type="file" id="fileIn" accept=".md,text/markdown,text/plain" hidden>
+ </div>
+</dialog>
+
+<dialog id="dlgFmt">
+ <div class="hd">Company format <button class="x" data-close>✕</button></div>
+ <div class="bd">
+  <p class="hint" style="margin-top:0">A format holds your company details for the title block, plus default general notes, pipe classes and drawing settings for new projects. Formats are .md files in <b>PID/Formats</b>.</p>
+  <div id="fmtState" class="hint"></div>
+  <div class="filelist" id="fmtlist"></div>
+  <div class="row">
+   <button class="btn" id="fmtImport">Import .md</button>
+   <button class="btn" id="fmtDownload">Download current as .md</button>
+   <button class="btn pri" id="fmtSaveGh">Save current to GitHub…</button>
+  </div>
+  <input type="file" id="fmtIn" accept=".md,text/markdown,text/plain" hidden>
  </div>
 </dialog>
 
 <dialog id="dlgGh">
  <div class="hd">GitHub storage <button class="x" data-close>✕</button></div>
  <div class="bd">
-  <p class="hint" style="margin-top:0">Projects are saved as Markdown files in a GitHub repository. Use a fine-grained personal access token with <b>Contents: read and write</b> on that repository only. The token is kept in this browser only.</p>
-  <div class="f"><span>Owner</span><input id="ghOwner" placeholder="user or organisation"></div>
-  <div class="f"><span>Repository</span><input id="ghRepo" placeholder="e.g. Ultech"></div>
-  <div class="f"><span>Branch</span><input id="ghBranch" placeholder="main"></div>
-  <div class="f"><span>Folder</span><input id="ghFolder" placeholder="pid"></div>
-  <div class="f"><span>Token</span><input id="ghToken" type="password" placeholder="github_pat_…"></div>
+  <p class="hint" style="margin-top:0">Projects and company formats are saved as Markdown files in a GitHub repository, in this structure:<br><code>PID/Projects/…md</code> &nbsp;and&nbsp; <code>PID/Formats/…md</code><br>Missing folders are created for you. Use a <b>private</b> repository and a fine-grained token with <b>Contents: read and write</b> on that repository only. The token is kept in this browser only.</p>
+  <div class="f"><span>Owner</span><input id="ghOwner" autocomplete="off" data-lpignore="true" data-1p-ignore="true" placeholder="user or organisation"></div>
+  <div class="f"><span>Repository</span><input id="ghRepo" autocomplete="off" data-lpignore="true" data-1p-ignore="true" placeholder="private data repo"></div>
+  <div class="f"><span>Branch</span><input id="ghBranch" autocomplete="off" data-lpignore="true" placeholder="main"></div>
+  <div class="f"><span>Base folder</span><input id="ghFolder" autocomplete="off" data-lpignore="true" placeholder="PID"></div>
+  <div class="f"><span>Token</span><div id="ghTokenSlot"></div></div>
   <div id="ghTest" class="hint"></div>
  </div>
  <div class="ft"><button class="btn" id="ghTestBtn">Test connection</button><button class="btn pri" id="ghSaveBtn">Save settings</button></div>
@@ -250,7 +277,8 @@ dialog .ft{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:6
 'use strict';
 /* ============================================================
    P&ID Editor — single-file app
-   Data: one project = one .md file (front matter + tables + JSON block)
+   Storage (GitHub): <base>/Projects/*.md  (projects + templates)
+                     <base>/Formats/*.md   (company formats)
    A project has one or more sheets; lines continue across sheets via off-page connectors.
    Units: millimetres on the sheet, y pointing down (flipped for DXF)
    ============================================================ */
@@ -260,7 +288,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const lsGet=k=>{try{return localStorage.getItem(k)}catch{return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
 const today=()=>{const d=new Date();return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`};
-const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2600)};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2800)};
 
 /* ---------------- sheets ---------------- */
 const SHEETS={A0:[1189,841],A1:[841,594],A2:[594,420],A3:[420,297]};
@@ -273,9 +301,11 @@ const IT=()=>S().items;
 const sheet=()=>SHEETS[D.meta.format]||SHEETS.A0;
 const fs=()=>FSCALE[D.meta.format]||1;
 const ss=()=>+D.meta.symScale||1;
+const TSc=it=>((+D.meta.textScale||100)/100)*((+(it&&it.ts)||100)/100); // text size factor
+const GAP=()=>+D.meta.labelGap||0;                                         // extra label distance (mm)
 
 /* ---------------- primitives ---------------- */
-// fill: 0 none, 1 black, 2 white (masks what is behind it)
+// fill: 0 none, 1 black, 2 white (masks what is behind it); lbl: 1 marks a movable label
 const L=(x1,y1,x2,y2,o={})=>({t:'line',a:[x1,y1,x2,y2],...o});
 const C=(x,y,r,fill=0,o={})=>({t:'circle',c:[x,y],r,fill,...o});
 const P=(p,fill=0,closed=true,o={})=>({t:'poly',p,fill,closed,...o});
@@ -322,7 +352,7 @@ const SYMS={
  flamebr:{n:'Breather, flame trap type',c:'Fittings',k:'breather flame arrestor trap vlamkering vlamdover beluchting diesel tank',note:'Use on diesel tank vents.',ports:[[0,0]],g:()=>[L(0,0,0,-1),R(-1.2,-3,2.4,2),L(-1.2,-3,1.2,-1),L(-1.2,-1,1.2,-3),L(0,-3,0,-3.6),goose(-3.6)]},
  raincap:{n:'Rain cap',c:'Fittings',k:'rain cap regenkap uitlaat exhaust outlet',ports:[[0,0]],g:()=>[L(0,0,0,-3),PL([[-2,-2.6],[0,-4.2],[2,-2.6]])]},
  sprinkler:{n:'Sprinkler head',c:'Fittings',k:'sprinkler head sprinklerkop nozzle sproeier',ports:[[0,0]],g:()=>[L(0,0,0,2),P([[-1.6,2],[1.6,2],[0,3.6]],1)]},
- pump:{n:'Pump',c:'Equipment',k:'pump pomp centrifugal centrifugaal fire pump bluspomp jockey pompset firepack',note:'Inlet on the left, outlet tangential at the top. Mirror (F) for the other hand.',ports:[[-3,0],[3.6,-3]],g:()=>[C(0,0,3),L(0,-3,3.6,-3),L(-1.8,2.4,-2.7,3.8),L(1.8,2.4,2.7,3.8),L(-2.7,3.8,2.7,3.8)]},
+ pump:{n:'Pump',c:'Equipment',k:'pump pomp centrifugal centrifugaal fire pump bluspomp jockey pompset',note:'Inlet on the left, outlet tangential at the top. Mirror (F) for the other hand.',ports:[[-3,0],[3.6,-3]],g:()=>[C(0,0,3),L(0,-3,3.6,-3),L(-1.8,2.4,-2.7,3.8),L(1.8,2.4,2.7,3.8),L(-2.7,3.8,2.7,3.8)]},
  manpump:{n:'Manual pump',c:'Equipment',k:'manual hand pump handpomp',ports:[[-2.5,0],[2.5,0]],g:()=>[C(0,0,2.5),T(0,0,'HP',1.4)]},
  lamp:{n:'Lamp',c:'Equipment',k:'lamp light lighting verlichting signaallamp',ports:[],g:()=>[C(0,0,2.2),L(-1.55,-1.55,1.55,1.55),L(-1.55,1.55,1.55,-1.55)]},
  earth:{n:'Earth',c:'Equipment',k:'earth ground aarde aarding',ports:[[0,0]],g:()=>[L(0,0,0,2),L(-2,2,2,2),L(-1.3,2.8,1.3,2.8),L(-.6,3.6,.6,3.6)]},
@@ -343,6 +373,7 @@ const RS={solid:{n:'Box',w:.35,layer:'EQUIP'},equip:{n:'Equipment (heavy)',w:.6,
 const MEDIA={FW:'Fire water',DF:'Diesel fuel',EX:'Exhaust gas',CW:'Cooling water',DR:'Drain',VT:'Vent',BR:'Breather',AIR:'Air',HY:'Hydraulic',FO:'Foam'};
 const SIZES=['DN15','DN20','DN25','DN32','DN40','DN50','DN65','DN80','DN100','DN125','DN150','DN200','DN250','DN300','DN350','DN400','DN450','DN500','DN600'];
 const INSUL=['None','Heat conservation','Personnel protection','Frost protection','Acoustic'];
+const BLOCKS={title:'Title block',revisions:'Revision table',nozzles:'Piping interfaces table',legend:'Legend',notes:'General notes'};
 
 /* ---------------- geometry ---------------- */
 function tpFn(x,y,rot=0,flip=false,s=1){
@@ -363,7 +394,7 @@ function xform(prims,o,layer,mask=true){
  });
 }
 function portsOf(it){const def=SYMS[it.s];if(!def)return [];const tp=tpFn(it.x,it.y,it.rot||0,it.flip,ss());return def.ports.map(([a,b])=>{const [x,y]=tp(a,b);return {x,y}})}
-function instR(it){const s=ss(),c=it.code||'PI',n=it.num||'';return Math.max(2.6*s,Math.max(textW(c,1.6*s),textW(n,1.3*s))/2+.7*s)}
+function instR(it){const s=ss(),k=TSc(it),c=it.code||'PI',n=it.num||'';return Math.max(2.6*s,Math.max(textW(c,1.6*s*k),textW(n,1.3*s*k))/2+.7*s)}
 function bboxOf(prims){
  let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;const ext=(x,y)=>{if(x<x1)x1=x;if(y<y1)y1=y;if(x>x2)x2=x;if(y>y2)y2=y};
  for(const p of prims){
@@ -376,6 +407,14 @@ function bboxOf(prims){
  if(x1>x2)return {x:0,y:0,w:0,h:0};
  return {x:x1,y:y1,w:x2-x1,h:y2-y1};
 }
+const near=(a,b,t=.6)=>Math.hypot(a[0]-b[0],a[1]-b[1])<t;
+function onSeg(p,A,B,t=.06){
+ if(p[0]<Math.min(A[0],B[0])-t||p[0]>Math.max(A[0],B[0])+t||p[1]<Math.min(A[1],B[1])-t||p[1]>Math.max(A[1],B[1])+t)return false;
+ const dx=B[0]-A[0],dy=B[1]-A[1],l=Math.hypot(dx,dy);if(!l)return near(p,A,t);
+ return Math.abs((p[0]-A[0])*dy-(p[1]-A[1])*dx)/l<t;
+}
+const inlineOn=(o,A,B)=>{if(o.k!=='sym')return false;const ps=portsOf(o);return ps.length>=2?onSeg([ps[0].x,ps[0].y],A,B)&&onSeg([ps[1].x,ps[1].y],A,B):onSeg([o.x,o.y],A,B)};
+const isHor=(A,B)=>Math.abs(A[1]-B[1])<1e-6, isVer=(A,B)=>Math.abs(A[0]-B[0])<1e-6;
 
 /* ---------------- lines: designation ---------------- */
 function lineDesig(it){
@@ -409,9 +448,67 @@ function opcTexts(it){
 }
 function nextOpcRef(){let m=0;D.sheets.forEach(s=>s.items.forEach(o=>{if(o.k==='opc'){const n=parseInt(o.ref,10);if(n>m)m=n}}));return String(m+1)}
 
+/* ---------------- attachment: which line ends touch an object ---------------- */
+function touchesObj(it,pt){
+ if(it.k==='sym')return portsOf(it).some(a=>near([a.x,a.y],pt));
+ if(it.k==='opc'){const p=opcPort(it);return near([p.x,p.y],pt)}
+ if(it.k==='inst'){const r=instR(it),d=Math.hypot(pt[0]-it.x,pt[1]-it.y);return Math.abs(d-r)<.9}
+ let b=null;
+ if(it.k==='rect')b={x:it.x,y:it.y,w:it.w,h:it.h};
+ else if(it.k==='text'&&it.box){const fr=itemPrims(it).find(p=>p.t==='poly');if(fr)b=bboxOf([fr])}
+ if(!b)return false;
+ const t=.7,inX=pt[0]>=b.x-t&&pt[0]<=b.x+b.w+t,inY=pt[1]>=b.y-t&&pt[1]<=b.y+b.h+t;
+ return (inX&&(Math.abs(pt[1]-b.y)<t||Math.abs(pt[1]-b.y-b.h)<t))||(inY&&(Math.abs(pt[0]-b.x)<t||Math.abs(pt[0]-b.x-b.w)<t));
+}
+function lineEndsTouching(it,items){const out=[];items.forEach(l=>{if(l.k!=='line'||l===it)return;[0,l.pts.length-1].forEach((k,j)=>{if(touchesObj(it,l.pts[k]))out.push({l,end:j})})});return out}
+function inlineSegs(it,items){const out=[];if(it.k!=='sym'||portsOf(it).length<2)return out;items.forEach(l=>{if(l.k!=='line')return;for(let i=1;i<l.pts.length;i++)if(inlineOn(it,l.pts[i-1],l.pts[i])){out.push({l,i});break}});return out}
+const attachCount=it=>lineEndsTouching(it,IT()).length+inlineSegs(it,IT()).length;
+
+/* move one end of a line, keeping its segments horizontal / vertical */
+function moveLineEnd(l,end,dx,dy){
+ if(!dx&&!dy)return;const n=l.pts.length,k=end?n-1:0,nb=end?n-2:1,E=l.pts[k],N=l.pts[nb],ne=[E[0]+dx,E[1]+dy];
+ const hor=isHor(E,N),ver=isVer(E,N);
+ if(n===2&&((hor&&dy)||(ver&&dx))){
+  // put the jog close to the moved end, but not inside a valve sitting on the line
+  const ax=hor?0:1,from=ne[ax],to=N[ax],dir=Math.sign(to-from)||1,len=Math.abs(to-from);
+  const spans=IT().filter(o=>o.k==='sym'&&inlineOn(o,E,N)).map(o=>{const ps=portsOf(o).map(p=>hor?p.x:p.y);return [Math.min(...ps)-1,Math.max(...ps)+1]});
+  let m=null;for(let t=5;t<len-1e-6;t+=GRID){const v=from+dir*t;if(!spans.some(([a,b])=>v>a&&v<b)){m=v;break}}
+  if(m===null)m=(from+to)/2;
+  const a=hor?[m,N[1]]:[N[0],m],b=hor?[m,ne[1]]:[ne[0],m];
+  l.pts=end?[N,a,b,ne]:[ne,b,a,N];cleanPts(l);return;
+ }
+ l.pts[k]=ne;
+ if(n>2){if(hor)l.pts[nb]=[N[0],N[1]+dy];else if(ver)l.pts[nb]=[N[0]+dx,N[1]]}
+ cleanPts(l);
+}
+function cleanPts(l){const out=[];l.pts.forEach(p=>{const q=out[out.length-1];if(!q||Math.abs(q[0]-p[0])>1e-6||Math.abs(q[1]-p[1])>1e-6)out.push(p)});if(out.length>=2)l.pts=out}
+/* move segment i (pts[i-1]→pts[i]) of a line perpendicular to itself; attached lines only stretch H/V */
+function moveSegment(l,i,d,items,exclude=new Set()){
+ if(!d)return;const pts=l.pts,A=[...pts[i-1]],B=[...pts[i]],hor=isHor(A,B),dx=hor?0:d,dy=hor?d:0,last=pts.length-1;
+ const others=items.filter(o=>o!==l&&!exclude.has(o.id));
+ const tees=[];others.forEach(o=>{if(o.k!=='line')return;[0,o.pts.length-1].forEach((k,j)=>{if(onSeg(o.pts[k],A,B))tees.push({o,end:j})})});
+ const objs=others.filter(o=>o.k!=='line'&&(inlineOn(o,A,B)||(o.attached&&((i-1===0&&touchesObj(o,A))||(i===last&&touchesObj(o,B))))));
+ let ai=i-1,bi=i;const perp=(P,Q)=>hor?isVer(P,Q):isHor(P,Q);
+ if(bi<last&&!perp(pts[bi+1],B))pts.splice(bi+1,0,[...B]);
+ if(ai>0&&!perp(pts[ai-1],A)){pts.splice(ai,0,[...A]);ai++;bi++}
+ pts[ai]=[A[0]+dx,A[1]+dy];pts[bi]=[B[0]+dx,B[1]+dy];
+ tees.forEach(({o,end})=>moveLineEnd(o,end,dx,dy));
+ objs.forEach(o=>moveItem(o,dx,dy));
+ cleanPts(l);
+}
+/* move selected items; attached objects take their lines along */
+function applyMove(ids,dx,dy){
+ const items=IT(),ends=[],segs=[];
+ ids.forEach(id=>{const it=byId(id);if(!it||it.k==='line'||!it.attached)return;
+  lineEndsTouching(it,items).forEach(e=>{if(!ids.has(e.l.id))ends.push(e)});
+  inlineSegs(it,items).forEach(s=>{if(!ids.has(s.l.id))segs.push(s)})});
+ ids.forEach(id=>{const it=byId(id);if(it)moveItem(it,dx,dy)});
+ segs.forEach(({l,i})=>{const A=l.pts[i-1],B=l.pts[i];if(isHor(A,B)&&dy)moveSegment(l,i,dy,items,ids);else if(isVer(A,B)&&dx)moveSegment(l,i,dx,items,ids)});
+ const seen=new Set();ends.forEach(({l,end})=>{const key=l.id+end;if(seen.has(key))return;seen.add(key);moveLineEnd(l,end,dx,dy)});
+}
+
 /* ---------------- item → primitives ---------------- */
 function cutSegment(ax,ay,bx,by){
- // remove the part of a pipe segment that runs through an inline symbol (between its two ports)
  const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;if(len2<1e-6)return [];
  const iv=[];
  for(const it of IT()){
@@ -427,39 +524,39 @@ function cutSegment(ax,ay,bx,by){
  if(t0<1-1e-4)out.push([t0,1]);
  return out.map(([a,b])=>[ax+a*dx,ay+a*dy,ax+b*dx,ay+b*dy]);
 }
+function shiftLbl(prs,it){const dx=+it.tdx||0,dy=+it.tdy||0;if(dx||dy)prs.forEach(p=>{if(p.lbl){p.x+=dx;p.y+=dy}});return prs}
 function itemPrims(it){
- const s=ss();
+ const s=ss(),k=TSc(it);
  if(it.k==='sym'){
   const def=SYMS[it.s];if(!def)return [];
   const pr=xform(def.g(it),{x:it.x,y:it.y,rot:it.rot||0,flip:it.flip,s},'SYMBOL');
   if(it.tag&&!def.inner){
-   const b=bboxOf(pr),h=1.9*s,g=1.4*s,pos=it.tagPos||'above';
-   const t=pos==='below'?T(it.x,b.y+b.h+g+h/2,it.tag,h):pos==='left'?T(b.x-g,it.y,it.tag,h,{align:'right'}):pos==='right'?T(b.x+b.w+g,it.y,it.tag,h,{align:'left'}):T(it.x,b.y-g-h/2,it.tag,h);
-   t.layer='TEXT';pr.push(t);
+   const b=bboxOf(pr),h=1.9*s*k,g=1.4*s+GAP(),pos=it.tagPos||'above',o={layer:'TEXT',lbl:1};
+   pr.push(pos==='below'?T(it.x,b.y+b.h+g+h/2,it.tag,h,o):pos==='left'?T(b.x-g,it.y,it.tag,h,{...o,align:'right'}):pos==='right'?T(b.x+b.w+g,it.y,it.tag,h,{...o,align:'left'}):T(it.x,b.y-g-h/2,it.tag,h,o));
   }
-  return pr;
+  return shiftLbl(pr,it);
  }
  if(it.k==='opc'){
   const out_=it.dir!=='in';
   const shape=out_?[[-5,-2.5],[2.5,-2.5],[5,0],[2.5,2.5],[-5,2.5]]:[[-5,0],[-2.5,-2.5],[5,-2.5],[5,2.5],[-2.5,2.5]];
   const pr=xform([P(shape),T(out_?-1.2:1.2,0,it.ref||'?',2.2)],{x:it.x,y:it.y,rot:it.rot||0,s},'SYMBOL');
-  const {lines}=opcTexts(it),h=1.9*s,lh=h*1.5,rot=((it.rot||0)%360+360)%360;
-  const [ax,ay]=tpFn(it.x,it.y,rot,false,s)(6.6,0);
+  const {lines}=opcTexts(it),h=1.9*s*k,lh=h*1.5,rot=((it.rot||0)%360+360)%360;
+  const [ax,ay]=tpFn(it.x,it.y,rot,false,s)(6.6+GAP()/s,0);
   lines.forEach((t,i)=>{
-   let x=ax,y=ay,al='left';
-   if(rot===0){y=ay+(i-(lines.length-1)/2)*lh}
+   let y=ay,al='left';
+   if(rot===0)y=ay+(i-(lines.length-1)/2)*lh;
    else if(rot===180){al='right';y=ay+(i-(lines.length-1)/2)*lh}
    else if(rot===90){al='center';y=ay+h*.4+i*lh}
    else{al='center';y=ay-h*.4-(lines.length-1-i)*lh}
-   pr.push(T(x,y,t,i===0?h:h*.9,{align:al,layer:'TEXT'}));
+   pr.push(T(ax,y,t,i===0?h:h*.9,{align:al,layer:'TEXT',lbl:1}));
   });
-  return pr;
+  return shiftLbl(pr,it);
  }
  if(it.k==='inst'){
   const r=instR(it),o={layer:'INST'},out=[C(it.x,it.y,r,2,{w:.25,...o})];
   if(it.panel)out.push(L(it.x-r,it.y,it.x+r,it.y,{w:.25,...o}));
-  if(it.num){out.push(T(it.x,it.y-r*.38,it.code||'PI',1.6*s,o),T(it.x,it.y+r*.42,it.num,1.3*s,o))}
-  else out.push(T(it.x,it.y,it.code||'PI',1.6*s,o));
+  if(it.num){out.push(T(it.x,it.y-r*.38,it.code||'PI',1.6*s*k,o),T(it.x,it.y+r*.42,it.num,1.3*s*k,o))}
+  else out.push(T(it.x,it.y,it.code||'PI',1.6*s*k,o));
   return out;
  }
  if(it.k==='line'){
@@ -475,18 +572,17 @@ function itemPrims(it){
   const label=lineLabel(it);
   if(label&&pts.length>1){
    let bi=1,bl=0;for(let i=1;i<pts.length;i++){const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);if(l>bl){bl=l;bi=i}}
-   const a=pts[bi-1],b=pts[bi],h=2*s,off=(1.2*s+h/2)*(it.labelFlip?-1:1);
+   const a=pts[bi-1],b=pts[bi],h=2*s*k,off=(1.2*s+GAP()+h/2)*(it.labelFlip?-1:1);
    const vert=Math.abs(b[0]-a[0])<Math.abs(b[1]-a[1]),seg=Math.hypot(b[0]-a[0],b[1]-a[1])||1,hw=textW(label,h)/2+2*s;
-   // place the label where no symbol or instrument sits on the line (or at the chosen position)
    const obst=IT().filter(o=>o!==it&&(o.k==='sym'||o.k==='inst'||o.k==='opc')).map(o=>[o.x,o.y]);
    const free=t=>{const cx=a[0]+(b[0]-a[0])*t,cy=a[1]+(b[1]-a[1])*t;return obst.every(([ox,oy])=>vert?!(Math.abs(oy-cy)<hw+3*s&&Math.abs(ox-cx)<6*s):!(Math.abs(ox-cx)<hw+3*s&&Math.abs(oy-cy)<6*s))};
    let t=.5;
    if(it.labelAt!==undefined&&it.labelAt!=='')t=Math.min(1,Math.max(0,+it.labelAt/100));
    else{const lim=Math.min(.5,hw/seg);const cand=[.5,.4,.6,.3,.7,.2,.8,.12,.88].map(v=>Math.min(1-lim,Math.max(lim,v)));t=cand.find(free)??.5}
    const mx=a[0]+(b[0]-a[0])*t,my=a[1]+(b[1]-a[1])*t;
-   out.push(vert?T(mx-off,my,label,h,{ang:90,layer:'TEXT'}):T(mx,my-off,label,h,{layer:'TEXT'}));
+   out.push(vert?T(mx-off,my,label,h,{ang:90,layer:'TEXT',lbl:1}):T(mx,my-off,label,h,{layer:'TEXT',lbl:1}));
   }
-  return out;
+  return shiftLbl(out,it);
  }
  if(it.k==='text'){
   const h=+it.h||2.5,lh=h*1.6,a=(it.ang||0)*Math.PI/180,out=[];
@@ -497,33 +593,40 @@ function itemPrims(it){
  if(it.k==='rect'){
   const st=RS[it.style]||RS.solid,out=[R(it.x,it.y,it.w,it.h,0,{w:st.w,dash:st.dash,layer:st.layer})];
   if(it.label){
-   const h=+it.th||2.5*s,lines=it.label.split('\n'),lh=h*1.6,pos=it.labelPos||'center';
+   const h=(+it.th||2.5*s)*k,lines=it.label.split('\n'),lh=h*1.6,pos=it.labelPos||'center';
    const y0=pos==='center'?it.y+it.h/2-(lines.length-1)*lh/2:it.y+h*1.2;
-   lines.forEach((ln,i)=>out.push(T(pos==='topleft'?it.x+h:it.x+it.w/2,y0+i*lh,ln,h,{align:pos==='topleft'?'left':'center',layer:'TEXT'})));
+   lines.forEach((ln,i)=>out.push(T(pos==='topleft'?it.x+h:it.x+it.w/2,y0+i*lh,ln,h,{align:pos==='topleft'?'left':'center',layer:'TEXT',lbl:1})));
   }
-  return out;
+  return shiftLbl(out,it);
  }
  return [];
 }
 const ORDER={rect:0,line:1,text:2,sym:3,inst:3,opc:3};
 const sortedItems=()=>[...IT()].sort((a,b)=>(ORDER[a.k]??2)-(ORDER[b.k]??2));
 
-/* ---------------- frame, title block, tables, legend ---------------- */
+/* ---------------- frame, title block, tables, legend ----------------
+   Each table is a block that can be moved per sheet (sheet.pos[block] = [dx,dy]). */
+let frameBlocks={};
 function framePrims(){
- const [W,H]=sheet(),f=fs(),m=D.meta,out=[];
+ const [W,H]=sheet(),f=fs(),m=D.meta,co=D.company||{},out=[],pos=S().pos||{},off=n=>pos[n]||[0,0];
+ frameBlocks={};
  const add=(...ps)=>ps.forEach(p=>out.push({layer:'FRAME',...p}));
  add(R(10,10,W-20,H-20,0,{w:.7}));
- const TW=180*f,X0=W-10-TW;
+ const TW=180*f;
  const cell=(x,y,w,h,label,val,vh=2.6*f,al='center')=>{
   add(R(x,y,w,h,0,{w:.25}));
   if(label)add(T(x+1*f,y+1.6*f,label,1.25*f,{align:'left'}));
   if(val!==undefined&&val!=='')add(T(al==='left'?x+2*f:x+w/2,y+(label?h/2+1*f:h/2),val,vh,{align:al}));
  };
  // title block
- const TH=42*f,Y0=H-10-TH,LW=45*f,cw=(TW-LW)/3;
+ const [tx,ty]=off('title'),TH=42*f,X0=W-10-TW+tx,Y0=H-10-TH+ty,LW=45*f,cw=(TW-LW)/3;
  cell(X0,Y0,LW,TH);
- add(T(X0+LW/2,Y0+TH*.42,m.company||'',4.2*f,{w:.35}));
- add(T(X0+LW/2,Y0+TH*.42+6*f,'P&ID',1.8*f));
+ const cname=co.name||'',addr=[...(co.address||'').split('\n'),co.contact||''].map(s=>s.trim()).filter(Boolean).slice(0,4);
+ const nh=Math.min(4.2*f,cname?(LW-4*f)/(cname.length*.78):4.2*f);
+ const cy0=Y0+TH/2-(addr.length*2.4*f)/2-(addr.length?2*f:0);
+ if(cname)add(T(X0+LW/2,cy0,cname,nh,{w:.35}));
+ addr.forEach((a,i)=>add(T(X0+LW/2,cy0+nh/2+3*f+i*2.5*f,a,Math.min(1.6*f,(LW-3*f)/(a.length*.78)))));
+ if(!cname&&!addr.length)add(T(X0+LW/2,Y0+TH/2,'P&ID',2.4*f));
  const x1=X0+LW,r1=9*f,r2=9*f,r3=TH-r1-r2;
  cell(x1,Y0,cw,r1,'PROJECT NO.',m.projectNo);
  cell(x1+cw,Y0,cw,r1,'DRAWN',m.drawnBy);
@@ -540,28 +643,31 @@ function framePrims(){
  desc.filter(Boolean).forEach((t,i)=>add(T(x1+2*f,Y0+r1+r2+4.8*f+i*5.4*f,t,(i===2?2.6:3.1)*f,{align:'left'})));
  cell(X0+TW-fw,Y0+r1+r2,fw,r3/2,'FORMAT',m.format,4*f);
  cell(X0+TW-fw,Y0+r1+r2+r3/2,fw,r3/2,'SHEET',`${cs+1} / ${D.sheets.length}`,2.8*f);
- // revisions (newest on top, header just above title block)
- const rh=5*f,revs=D.revisions.filter(r=>r.rev||r.date||r.desc),c1=16*f,c2=26*f,c3=TW-c1-c2;
- let y=Y0-rh;
- const revRow=(y,a,b,c,bold)=>{add(R(X0,y,c1,rh,0,{w:.25}),R(X0+c1,y,c2,rh,0,{w:.25}),R(X0+c1+c2,y,c3,rh,0,{w:.25}));
-  const h=(bold?1.7:2)*f;add(T(X0+c1/2,y+rh/2,a,h),T(X0+c1+c2/2,y+rh/2,b,h),T(X0+c1+c2+(bold?c3/2:2*f),y+rh/2,c,h,{align:bold?'center':'left'}))};
+ frameBlocks.title={x:X0,y:Y0,w:TW,h:TH};
+ // revisions: by default directly above the title block (newest on top)
+ const [rx,ry]=off('revisions'),RX=X0+rx,rh=5*f,revs=D.revisions.filter(r=>r.rev||r.date||r.desc),c1=16*f,c2=26*f,c3=TW-c1-c2;
+ const rBottom=Y0+ry;let y=rBottom-rh;
+ const revRow=(y,a,b,c,bold)=>{add(R(RX,y,c1,rh,0,{w:.25}),R(RX+c1,y,c2,rh,0,{w:.25}),R(RX+c1+c2,y,c3,rh,0,{w:.25}));
+  const h=(bold?1.7:2)*f;add(T(RX+c1/2,y+rh/2,a,h),T(RX+c1+c2/2,y+rh/2,b,h),T(RX+c1+c2+(bold?c3/2:2*f),y+rh/2,c,h,{align:bold?'center':'left'}))};
  revRow(y,'REVISION','DATE','DESCRIPTION',true);
  revs.forEach(r=>{y-=rh;revRow(y,r.rev,r.date,r.desc)});
- // piping interfaces (first sheet, or all sheets when chosen)
+ frameBlocks.revisions={x:RX,y,w:TW,h:rBottom-y};
+ // piping interfaces: by default above the revision table
  const noz=D.nozzles.filter(n=>n.id||n.size||n.flange||n.type);
  if(m.showNozzles!==false&&noz.length&&(cs===0||m.nozzlesAll)){
-  const nh=4.5*f,w=[16*f,18*f,88*f,TW-122*f],yTop=y-6*f-(noz.length+2)*nh;
-  add(R(X0,yTop,TW,nh,0,{w:.25}),T(X0+2*f,yTop+nh/2,'PIPING INTERFACES',1.8*f,{align:'left'}));
-  const row=(yy,vals,head)=>{let x=X0;vals.forEach((v,i)=>{add(R(x,yy,w[i],nh,0,{w:.25}));add(T(i===2&&!head?x+1.5*f:x+w[i]/2,yy+nh/2,v||'',(head?1.4:1.7)*f,{align:i===2&&!head?'left':'center'}));x+=w[i]})};
-  row(yTop+nh,['NOZZLE','SIZE','DESIGN FLANGE RATING','TYPE'],true);
-  noz.forEach((n,i)=>row(yTop+nh*(2+i),[n.id,n.size,n.flange,n.type]));
+  const [nx,ny]=off('nozzles'),NX=RX+nx,nh2=4.5*f,w=[16*f,18*f,88*f,TW-122*f],yTop=y-6*f-(noz.length+2)*nh2+ny;
+  add(R(NX,yTop,TW,nh2,0,{w:.25}),T(NX+2*f,yTop+nh2/2,'PIPING INTERFACES',1.8*f,{align:'left'}));
+  const row=(yy,vals,head)=>{let x=NX;vals.forEach((v,i)=>{add(R(x,yy,w[i],nh2,0,{w:.25}));add(T(i===2&&!head?x+1.5*f:x+w[i]/2,yy+nh2/2,v||'',(head?1.4:1.7)*f,{align:i===2&&!head?'left':'center'}));x+=w[i]})};
+  row(yTop+nh2,['NOZZLE','SIZE','DESIGN FLANGE RATING','TYPE'],true);
+  noz.forEach((n,i)=>row(yTop+nh2*(2+i),[n.id,n.size,n.flange,n.type]));
+  frameBlocks.nozzles={x:NX,y:yTop,w:TW,h:(noz.length+2)*nh2};
  }
- // legend (symbols used on this sheet)
+ // legend (symbols used on this sheet), default top right
  if(m.showLegend!==false){
   const ent=legendEntries();
   if(ent.length){
-   const LWd=86*f,lx=W-10-LWd,eh=5.6*f,ly=10,hh=9*f;
-   add(R(lx,ly,LWd,hh+ent.length*eh+3*f,0,{w:.35}));
+   const [gx,gy]=off('legend'),LWd=86*f,lx=W-10-LWd+gx,eh=5.6*f,ly=10+gy,hh=9*f,lhh=hh+ent.length*eh+3*f;
+   add(R(lx,ly,LWd,lhh,0,{w:.35}));
    add(T(lx+3*f,ly+5*f,'LEGEND:',2.6*f,{align:'left'}),L(lx+3*f,ly+6.8*f,lx+17*f,ly+6.8*f,{w:.25}));
    ent.forEach((e,i)=>{
     const cy=ly+hh+eh*i+eh/2,cx=lx+8*f;
@@ -572,14 +678,16 @@ function framePrims(){
     else if(e.line){const st=LS[e.line];add(L(cx-5*f,cy,cx+5*f,cy,{w:st.w,dash:st.dash}))}
     add(T(lx+16*f,cy,e.n.toUpperCase(),1.75*f,{align:'left'}));
    });
+   frameBlocks.legend={x:lx,y:ly,w:LWd,h:lhh};
   }
  }
- // general notes
+ // general notes, default bottom left
  const notes=(D.notes||'').split('\n').map(s=>s.trim()).filter(Boolean);
  if(notes.length){
-  const h=2.3*f,lh=h*1.7,ny=H-10-5*f-notes.length*lh;
-  add(T(16,ny-lh,'GENERAL NOTES:',h,{align:'left'}),L(16,ny-lh+h*.75,16+textW('GENERAL NOTES:',h),ny-lh+h*.75,{w:.25}));
-  notes.forEach((n,i)=>add(T(16,ny+i*lh,n,h,{align:'left'})));
+  const [ox,oy]=off('notes'),h=2.3*f,lh=h*1.7,nx0=16+ox,ny=H-10-5*f-notes.length*lh+oy,tl=nx0+textW('GENERAL NOTES:',h);
+  add(T(nx0,ny-lh,'GENERAL NOTES:',h,{align:'left'}),L(nx0,ny-lh+h*.75,tl,ny-lh+h*.75,{w:.25}));
+  notes.forEach((n,i)=>add(T(nx0,ny+i*lh,n,h,{align:'left'})));
+  frameBlocks.notes={x:nx0-1,y:ny-lh-h,w:Math.max(...notes.map(n=>textW(n,h)),tl-nx0)+2,h:(notes.length+1)*lh+h};
  }
  return out;
 }
@@ -614,27 +722,31 @@ function primsToSvg(ps){
 
 /* ---------------- state ---------------- */
 let file={path:null,sha:null,dirty:false};
-let sel=new Set(),tool='select',toolArg=null,draft=null,drag=null,spaceDown=false;
+let sel=new Set(),selBlock=null,tool='select',toolArg=null,draft=null,drag=null,spaceDown=false;
 let view={x:0,y:0,w:1189,h:841};
 let undoS=[],redoS=[],clip=null,tab='props';
 const svg=$('#svg');
 const byId=id=>IT().find(i=>i.id===id);
 const opt={snap:true,ortho:true,grid:true,tips:lsGet('pid.tips')!=='0'};
 
-function newDoc(){return {meta:{title:'P&ID',client:'',location:'',projectNo:'',drawingNo:'',company:'WB Firepacks',drawnBy:'',date:today(),rev:'0',revDate:today(),scale:'NTS',format:'A0',symScale:1,showLegend:true,showNozzles:true,nozzlesAll:false,lineFmt:'{size}-{medium}-{no}-{spec}'},revisions:[{rev:'0',date:today(),desc:'Design.'}],nozzles:[],specs:[],notes:'',sheets:[{id:uid(),name:'Sheet 1',items:[]}]}}
+function newDoc(company){return {meta:{title:'P&ID',client:'',location:'',projectNo:'',drawingNo:'',drawnBy:'',date:today(),rev:'0',revDate:today(),scale:'NTS',format:'A0',symScale:1,textScale:100,labelGap:0,showLegend:true,showNozzles:true,nozzlesAll:false,lineFmt:'{size}-{medium}-{no}-{spec}'},company:company?JSON.parse(JSON.stringify(company)):{name:'',address:'',contact:'',file:''},revisions:[{rev:'0',date:today(),desc:'Design.'}],nozzles:[],specs:[],notes:'',sheets:[{id:uid(),name:'Sheet 1',items:[],pos:{}}]}}
 function normalize(d){
- const n=newDoc();d.meta={...n.meta,...(d.meta||{})};
+ const n=newDoc();
+ let co=d.company;if(!co&&d.meta&&d.meta.company!==undefined)co=typeof d.meta.company==='object'?d.meta.company:{name:d.meta.company};
+ if(d.meta)delete d.meta.company;
+ d.meta={...n.meta,...(d.meta||{})};d.company={...n.company,...(co||{})};
  if(!Array.isArray(d.sheets)||!d.sheets.length)d.sheets=[{id:uid(),name:'Sheet 1',items:d.items||[]}];
  delete d.items;
- d.sheets.forEach((s,i)=>{s.id=s.id||uid();s.name=s.name||('Sheet '+(i+1));s.items=(s.items||[]).map(it=>({...it,id:it.id||uid()}))});
+ d.sheets.forEach((s,i)=>{s.id=s.id||uid();s.name=s.name||('Sheet '+(i+1));s.pos=s.pos||{};s.items=(s.items||[]).map(it=>({...it,id:it.id||uid()}))});
  d.revisions=d.revisions||[];d.nozzles=d.nozzles||[];d.specs=d.specs||[];d.notes=d.notes||'';
  return d;
 }
-
-function pushHist(){undoS.push(JSON.stringify({D,cs}));if(undoS.length>150)undoS.shift();redoS=[];markDirty()}
-function restore(snap){const o=JSON.parse(snap);D=o.D;cs=Math.min(o.cs,D.sheets.length-1);afterLoad(false);markDirty()}
-function undo(){if(!undoS.length)return;redoS.push(JSON.stringify({D,cs}));restore(undoS.pop())}
-function redo(){if(!redoS.length)return;undoS.push(JSON.stringify({D,cs}));restore(redoS.pop())}
+const snapState=()=>JSON.stringify({D,cs});
+function commit(before){undoS.push(before);if(undoS.length>150)undoS.shift();redoS=[];markDirty()}
+function pushHist(){commit(snapState())}
+function restore(snap){const o=JSON.parse(snap);D=o.D;cs=Math.min(o.cs,D.sheets.length-1);selBlock=null;afterLoad(false);markDirty()}
+function undo(){if(!undoS.length)return;redoS.push(snapState());restore(undoS.pop())}
+function redo(){if(!redoS.length)return;undoS.push(snapState());restore(redoS.pop())}
 function markDirty(){file.dirty=true;updTitle();clearTimeout(markDirty.t);markDirty.t=setTimeout(()=>lsSet('pid.draft',JSON.stringify({D,file,cs})),600)}
 function updTitle(){const m=D.meta;$('#docname').innerHTML=`<b>${esc(m.title||'Untitled')}</b>${m.client?' · '+esc(m.client):''} · rev ${esc(m.rev||'-')} <span class="${file.dirty?'dirty':''}">${file.path?esc(file.path.split('/').pop()):'(not saved)'}</span>`}
 
@@ -644,13 +756,14 @@ function renderFrame(){
  for(const id of ['paper','gridRect']){const r=$('#'+id);r.setAttribute('width',W);r.setAttribute('height',H)}
  $('#gridRect').style.display=opt.grid?'':'none';
  $('#gFrame').innerHTML=primsToSvg(framePrims());
+ $('#gBlocks').innerHTML=Object.entries(frameBlocks).map(([k,b])=>`<rect data-block="${k}" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"/>`).join('');
 }
 function renderItems(){
  $('#gItems').innerHTML=sortedItems().map(it=>{
   const pr=itemPrims(it);let hit;
   if(it.k==='line')hit=`<polyline class="hit" points="${it.pts.map(p=>p.join(',')).join(' ')}" stroke-width="3"/>`;
   else{const b=bboxOf(pr);hit=`<rect class="hit" x="${b.x-1}" y="${b.y-1}" width="${b.w+2}" height="${b.h+2}"/>`}
-  if(it.k==='rect')hit=`<polyline class="hit" points="${it.x},${it.y} ${it.x+it.w},${it.y} ${it.x+it.w},${it.y+it.h} ${it.x},${it.y+it.h} ${it.x},${it.y}" stroke-width="3"/>`+(it.label?`<rect class="hit" x="${it.x+it.w/2-15}" y="${it.y+(it.labelPos==='center'?it.h/2-4:0)}" width="30" height="8"/>`:'');
+  if(it.k==='rect')hit=`<polyline class="hit" points="${it.x},${it.y} ${it.x+it.w},${it.y} ${it.x+it.w},${it.y+it.h} ${it.x},${it.y+it.h} ${it.x},${it.y}" stroke-width="3"/>`+(it.label?(()=>{const b=bboxOf(pr.filter(p=>p.lbl));return `<rect class="hit" x="${b.x-1}" y="${b.y-1}" width="${b.w+2}" height="${b.h+2}"/>`})():'');
   const warn=it.k==='opc'&&!opcPartner(it);
   return `<g class="it${sel.has(it.id)?' sel':''}${warn?' warn':''}" data-id="${it.id}">${primsToSvg(pr)}${hit}</g>`;
  }).join('');
@@ -659,9 +772,15 @@ function renderItems(){
 function px(){return view.w/(svg.clientWidth||1)}
 function renderSel(){
  const g=$('#gSel');let h='';const k=px();
+ if(selBlock&&frameBlocks[selBlock]){const b=frameBlocks[selBlock];h+=`<rect class="box" x="${b.x-1.5}" y="${b.y-1.5}" width="${b.w+3}" height="${b.h+3}" stroke-width="${k*1.5}"/>`}
  sel.forEach(id=>{const it=byId(id);if(!it)return;const b=bboxOf(itemPrims(it));h+=`<rect class="box" x="${b.x-1.5}" y="${b.y-1.5}" width="${b.w+3}" height="${b.h+3}" stroke-width="${k}"/>`});
  if(sel.size===1){const it=byId([...sel][0]);
-  if(it&&it.k==='line')it.pts.forEach((p,i)=>{h+=`<rect class="vh" data-id="${it.id}" data-vi="${i}" x="${p[0]-4*k}" y="${p[1]-4*k}" width="${8*k}" height="${8*k}" stroke-width="${k}"/>`});
+  if(it){const lp=itemPrims(it).filter(p=>p.lbl);if(lp.length){const b=bboxOf(lp),hx=b.x-5*k,hy=b.y+b.h/2;h+=`<rect class="lh" data-id="${it.id}" data-lbl="1" x="${hx-3.5*k}" y="${hy-3.5*k}" width="${7*k}" height="${7*k}" transform="rotate(45 ${hx} ${hy})" stroke-width="${k}"/>`}}
+  if(it&&it.k==='line'){
+   for(let i=1;i<it.pts.length;i++){const A=it.pts[i-1],B=it.pts[i],len=Math.hypot(B[0]-A[0],B[1]-A[1]);
+    if(len>12*k&&(isHor(A,B)||isVer(A,B)))h+=`<circle class="sh" data-id="${it.id}" data-seg="${i}" cx="${(A[0]+B[0])/2}" cy="${(A[1]+B[1])/2}" r="${4.5*k}" stroke-width="${k}" style="cursor:${isHor(A,B)?'ns-resize':'ew-resize'}"/>`}
+   it.pts.forEach((p,i)=>{h+=`<rect class="vh" data-id="${it.id}" data-vi="${i}" x="${p[0]-4*k}" y="${p[1]-4*k}" width="${8*k}" height="${8*k}" stroke-width="${k}"/>`});
+  }
   if(it&&it.k==='rect')h+=`<rect class="vh" data-id="${it.id}" data-rs="1" x="${it.x+it.w-4*k}" y="${it.y+it.h-4*k}" width="${8*k}" height="${8*k}" stroke-width="${k}"/>`;
  }
  g.innerHTML=h;
@@ -682,17 +801,17 @@ function fit(){const [W,H]=sheet(),cw=svg.clientWidth||1,ch=svg.clientHeight||1,
 function zoomTo(it){const b=bboxOf(itemPrims(it));const w=Math.max(b.w*5,b.h*5*(svg.clientWidth/svg.clientHeight),140);view.w=w;view.h=w*svg.clientHeight/svg.clientWidth;view.x=b.x+b.w/2-w/2;view.y=b.y+b.h/2-view.h/2;setView()}
 
 /* ---------------- sheets ---------------- */
-function switchSheet(i){if(i===cs||i<0||i>=D.sheets.length)return;if(draft)finishDraft();cs=i;sel.clear();renderAll()}
-function addSheet(dup=false){pushHist();const s=dup?JSON.parse(JSON.stringify(S())):{items:[]};s.id=uid();s.name=dup?S().name+' (copy)':'Sheet '+(D.sheets.length+1);
- if(dup)s.items.forEach(o=>{o.id=uid();if(o.k==='opc')o.ref=''});D.sheets.splice(cs+1,0,s);cs++;sel.clear();renderAll();toast(dup?'Sheet duplicated (connector numbers cleared)':'Sheet added')}
-function delSheet(){if(D.sheets.length<2){toast('A project needs at least one sheet');return}if(!confirm(`Delete sheet ${cs+1} "${S().name}" and everything on it?`))return;pushHist();D.sheets.splice(cs,1);cs=Math.max(0,cs-1);sel.clear();renderAll()}
+function switchSheet(i){if(i===cs||i<0||i>=D.sheets.length)return;if(draft)finishDraft();cs=i;sel.clear();selBlock=null;renderAll()}
+function addSheet(dup=false){pushHist();const s=dup?JSON.parse(JSON.stringify(S())):{items:[],pos:JSON.parse(JSON.stringify(S().pos||{}))};s.id=uid();s.name=dup?S().name+' (copy)':'Sheet '+(D.sheets.length+1);
+ if(dup)s.items.forEach(o=>{o.id=uid();if(o.k==='opc')o.ref=''});D.sheets.splice(cs+1,0,s);cs++;sel.clear();selBlock=null;renderAll();toast(dup?'Sheet duplicated (connector numbers cleared)':'Sheet added')}
+function delSheet(){if(D.sheets.length<2){toast('A project needs at least one sheet');return}if(!confirm(`Delete sheet ${cs+1} "${S().name}" and everything on it?`))return;pushHist();D.sheets.splice(cs,1);cs=Math.max(0,cs-1);sel.clear();selBlock=null;renderAll()}
 function moveSheet(d){const j=cs+d;if(j<0||j>=D.sheets.length)return;pushHist();const [s]=D.sheets.splice(cs,1);D.sheets.splice(j,0,s);cs=j;renderAll()}
 $('#sheetbar').addEventListener('click',e=>{const b=e.target.closest('[data-sh]');if(!b)return;if(b.dataset.sh==='add')addSheet();else switchSheet(+b.dataset.sh)});
 $('#sheetbar').addEventListener('dblclick',e=>{const b=e.target.closest('[data-sh]');if(!b||b.dataset.sh==='add')return;const i=+b.dataset.sh;const n=prompt('Sheet name',D.sheets[i].name);if(n){pushHist();D.sheets[i].name=n;renderAll()}});
 
 /* ---------------- tools UI ---------------- */
 const TOOLS=[
- {id:'select',n:'Select',k:'V',tip:'Click to select, <kbd>Shift</kbd>+click to add, drag to move. Drag an empty area left→right to select inside, right→left to select everything touched. Double-click a line to add a bend.',i:'<path d="M4 2l9 6-4 1 3 5-2 1-3-5-3 3z"/>'},
+ {id:'select',n:'Select',k:'V',tip:'Click to select, <kbd>Shift</kbd>+click to add, drag to move. On a selected line: round handles move a segment, square handles move a corner. The orange diamond moves the text. Click a table (legend, title block…) to move it.',i:'<path d="M4 2l9 6-4 1 3 5-2 1-3-5-3 3z"/>'},
  {id:'pan',n:'Pan',k:'H',tip:'Drag to move the view. Also: hold <kbd>Space</kbd> or the middle mouse button. Scroll to zoom.',i:'<path d="M8 1v14M1 8h14M8 1l-2 2M8 1l2 2M8 15l-2-2M8 15l2-2M1 8l2-2M1 8l2 2M15 8l-2-2M15 8l-2 2"/>'},
  {id:'line',arg:'pipe',n:'Pipe',k:'P',tip:'Click the points of the pipe; double-click, <kbd>Enter</kbd> or right-click to finish. Give it line data (line no., size, medium, pipe class) in Properties – it appears in the line list.',i:'<path d="M1 12h7V4h7" stroke-width="2"/>'},
  {id:'line',arg:'small',n:'Small',k:'',tip:'Small bore / drain / instrument line. Same line data as a pipe.',i:'<path d="M1 12h7V4h7"/>'},
@@ -702,9 +821,9 @@ const TOOLS=[
  {id:'opc',n:'Off-page',k:'O',tip:'Off-page connector: continues a line on another sheet. Click on the end of a line to attach it. Same number = same connection; the sheet reference and line number are filled in automatically.',i:'<path d="M1 4h10l4 4-4 4H1z"/>'},
  {id:'text',n:'Text',k:'T',tip:'Free text. Tick "Frame" for alarm or signal tags such as LS-01011.',i:'<path d="M3 3h10M8 3v11"/>'},
  {id:'rect',arg:'solid',n:'Box',k:'Q',tip:'Box for equipment, panels, tanks and controllers. Drag to draw.',i:'<rect x="2" y="3" width="12" height="10"/>'},
- {id:'rect',arg:'dashed',n:'Boundary',k:'B',tip:'Dashed scope boundary, e.g. PUMPROOM or OUTSIDE, SCOPE WB FIREPACKS.',i:'<rect x="2" y="3" width="12" height="10" stroke-dasharray="2.5 1.5"/>'},
+ {id:'rect',arg:'dashed',n:'Boundary',k:'B',tip:'Dashed scope boundary, e.g. PUMPROOM.',i:'<rect x="2" y="3" width="12" height="10" stroke-dasharray="2.5 1.5"/>'},
 ];
-const HINTS={select:'Click to select · Shift+click add · drag to move · R rotate · F mirror · Del delete · Ctrl+D duplicate · Ctrl+F search',pan:'Drag to pan · scroll to zoom',line:'Click points · Shift = free angle · double-click / Enter / right-click to finish · Esc cancel',inst:'Click to place an instrument',text:'Click to place text',rect:'Drag to draw a box',sym:'Click to place · snaps onto pipes and turns with the pipe · Esc to stop',opc:'Click on the end of a line to attach an off-page connector'};
+const HINTS={select:'Click to select · drag to move · round handle = move segment · ◆ = move text · R rotate · F mirror · Del delete · Ctrl+F search',pan:'Drag to pan · scroll to zoom',line:'Click points · Shift = free angle · double-click / Enter / right-click to finish · Esc cancel',inst:'Click to place an instrument',text:'Click to place text',rect:'Drag to draw a box',sym:'Click to place · snaps onto pipes and turns with the pipe · Esc to stop',opc:'Click on the end of a line to attach an off-page connector'};
 function setTool(t,arg=null){
  if(draft&&!(t==='line'&&tool==='line'))finishDraft();
  tool=t;toolArg=arg;
@@ -712,6 +831,7 @@ function setTool(t,arg=null){
  document.querySelectorAll('.sym').forEach(b=>b.classList.toggle('on',t==='sym'&&b.dataset.s===arg));
  $('#hint').textContent=(t==='inst'&&arg?`Place instrument ${arg} – `:'')+(HINTS[t]||'');
  svg.style.cursor=t==='pan'?'grab':t==='select'?'default':'crosshair';
+ svg.classList.toggle('notsel',t!=='select');
  if(innerWidth<=900)$('#left').classList.remove('open');
 }
 function buildTools(){
@@ -786,7 +906,7 @@ function renderSearch(q){
  $('#symlist').innerHTML=h;
 }
 function pickHit(h){if(!h)return;if(h.type==='sym')setTool('sym',h.key);else if(h.type==='inst')setTool('inst',h.key);else if(h.type==='line')setTool('line',h.key);else if(h.type==='opc')setTool('opc');toast(h.n+' – click on the sheet to place')}
-function goTo(si,id){if(si!==cs){cs=si;sel.clear();draft=null}sel=new Set([id]);renderAll();const it=byId(id);if(it)zoomTo(it);tab='props';renderPane();if(innerWidth<=900)$('#left').classList.remove('open')}
+function goTo(si,id){if(si!==cs){cs=si;sel.clear();draft=null}selBlock=null;sel=new Set([id]);renderAll();const it=byId(id);if(it)zoomTo(it);tab='props';renderPane();if(innerWidth<=900)$('#left').classList.remove('open')}
 
 /* ---------------- tooltips ---------------- */
 const tip=$('#tip');let tipT=null,tipEl=null;
@@ -799,98 +919,123 @@ document.addEventListener('pointerover',e=>{
 document.addEventListener('pointerout',e=>{const el=e.target.closest('[data-tip]');if(el&&!el.contains(e.relatedTarget))hideTip()});
 document.addEventListener('pointerdown',hideTip,true);
 function itemTip(it){
- if(it.k==='sym'){const d=SYMS[it.s];return `<b>${esc(d.n)}</b>${it.tag?'<br>Tag: '+esc(it.tag):''}`}
- if(it.k==='inst')return `<b>${esc(INST[it.code]||it.code)}</b><br>${esc(it.code||'')}${it.num?'-'+esc(it.num):''}${it.panel?' · panel mounted':''}`;
+ const att=it.attached?'<br>🔗 Attached – lines move with it':'';
+ if(it.k==='sym'){const d=SYMS[it.s];return `<b>${esc(d.n)}</b>${it.tag?'<br>Tag: '+esc(it.tag):''}${att}`}
+ if(it.k==='inst')return `<b>${esc(INST[it.code]||it.code)}</b><br>${esc(it.code||'')}${it.num?'-'+esc(it.num):''}${it.panel?' · panel mounted':''}${att}`;
  if(it.k==='line'){const sp=D.specs.find(s=>s.code===it.spec);const rows=[['Line',lineDesig(it)],['Pipe class',it.spec?(it.spec+(sp?' – '+[sp.desc,sp.rating,sp.material].filter(Boolean).join(', '):'')):''],['From',it.from],['To',it.to],['Design',[it.dp&&it.dp+' bar',it.dt&&it.dt+' °C'].filter(Boolean).join(' / ')]].filter(r=>r[1]);
   return `<b>${esc(LS[it.style||'pipe'].n)}</b>${rows.map(r=>`<br>${r[0]}: ${esc(r[1])}`).join('')}${!rows.length&&PROCESS.has(it.style||'pipe')?'<br><i>No line data yet</i>':''}`}
- if(it.k==='opc'){const {lines,pr}=opcTexts(it);return `<b>Off-page connector ${esc(it.ref||'?')}</b><br>${esc(lines.join(' · '))}${pr?`<br>Continues on sheet ${pr.sheet+1}: ${esc(D.sheets[pr.sheet].name)}`:'<br>⚠ No matching connector on another sheet'}`}
- if(it.k==='rect')return `<b>${esc(RS[it.style||'solid'].n)}</b>${it.label?'<br>'+esc(it.label).replace(/\n/g,'<br>'):''}`;
- if(it.k==='text')return `<b>Text</b><br>${esc(it.text).replace(/\n/g,'<br>')}`;
+ if(it.k==='opc'){const {lines,pr}=opcTexts(it);return `<b>Off-page connector ${esc(it.ref||'?')}</b><br>${esc(lines.join(' · '))}${pr?`<br>Continues on sheet ${pr.sheet+1}: ${esc(D.sheets[pr.sheet].name)}`:'<br>⚠ No matching connector on another sheet'}${att}`}
+ if(it.k==='rect')return `<b>${esc(RS[it.style||'solid'].n)}</b>${it.label?'<br>'+esc(it.label).replace(/\n/g,'<br>'):''}${att}`;
+ if(it.k==='text')return `<b>Text</b><br>${esc(it.text).replace(/\n/g,'<br>')}${att}`;
  return '';
 }
 
 /* ---------------- properties / project pane ---------------- */
 const fld=(label,key,val,type='text',extra='',tipTxt='')=>`<label class="f"${tipTxt?` data-tip="${esc(tipTxt)}"`:''}><span>${label}</span>${
  type==='textarea'?`<textarea data-f="${key}" ${extra}>${esc(val)}</textarea>`:
- type==='checkbox'?`<input type="checkbox" data-f="${key}" ${val?'checked':''}>`:
- `<input type="${type}" data-f="${key}" value="${esc(val)}" ${extra}>`}</label>`;
+ type==='checkbox'?`<input type="checkbox" data-f="${key}" ${val?'checked':''} ${extra}>`:
+ `<input type="${type}" data-f="${key}" value="${esc(val)}" autocomplete="off" ${extra}>`}</label>`;
 const sfld=(label,key,val,opts,tipTxt='')=>`<label class="f"${tipTxt?` data-tip="${esc(tipTxt)}"`:''}><span>${label}</span><select data-f="${key}">${Object.entries(opts).map(([k,v])=>`<option value="${esc(k)}" ${String(val)===String(k)?'selected':''}>${esc(v)}</option>`).join('')}</select></label>`;
 const DL=()=>`<datalist id="dlSize">${SIZES.map(s=>`<option value="${s}">`).join('')}</datalist><datalist id="dlMed">${Object.entries(MEDIA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</datalist><datalist id="dlIns">${INSUL.map(s=>`<option value="${s}">`).join('')}</datalist><datalist id="instcodes">${Object.entries(INST).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</datalist>`;
 function lineDataFields(items){
  const v=f=>{const vals=[...new Set(items.map(i=>i[f]??''))];return vals.length===1?vals[0]:null};
- const inp=(label,f,extra='',t='')=>{const val=v(f);return `<label class="f"${t?` data-tip="${esc(t)}"`:''}><span>${label}</span><input data-f="${f}" value="${esc(val??'')}" ${val===null?'placeholder="(mixed)"':''} ${extra}></label>`};
+ const inp=(label,f,extra='',t='')=>{const val=v(f);return `<label class="f"${t?` data-tip="${esc(t)}"`:''}><span>${label}</span><input data-f="${f}" autocomplete="off" value="${esc(val??'')}" ${val===null?'placeholder="(mixed)"':''} ${extra}></label>`};
  const spv=v('spec');
  const specOpts=`${spv===null?'<option value="__keep" selected>(mixed)</option>':''}<option value="" ${spv===''?'selected':''}>—</option>`+D.specs.map(s=>`<option value="${esc(s.code)}" ${spv===s.code?'selected':''}>${esc(s.code)}${s.desc?' – '+esc(s.desc):''}</option>`).join('')+(spv&&!D.specs.some(s=>s.code===spv)?`<option value="${esc(spv)}" selected>${esc(spv)} (not in list)</option>`:'');
  return `<h4>Line data${items.length>1?` · ${items.length} lines`:''}</h4>`
-  +`<div class="f" data-tip="Line number. Lines with the same number (also on other sheets) are combined in the line list."><span>Line no.</span><div class="two"><input data-f="lineNo" value="${esc(v('lineNo')??'')}" ${v('lineNo')===null?'placeholder="(mixed)"':''}>${items.length===1?'<button class="btn sm" data-act="nextno" data-tip="Next free line number">Next</button>':''}</div></div>`
+  +`<div class="f" data-tip="Line number. Lines with the same number (also on other sheets) are combined in the line list."><span>Line no.</span><div class="two"><input data-f="lineNo" autocomplete="off" value="${esc(v('lineNo')??'')}" ${v('lineNo')===null?'placeholder="(mixed)"':''}>${items.length===1?'<button class="btn sm" data-act="nextno" data-tip="Next free line number">Next</button>':''}</div></div>`
   +inp('Size','size','list="dlSize"','Nominal size, e.g. DN300')
   +inp('Medium','medium','list="dlMed"','Medium code, e.g. FW = fire water, DF = diesel fuel, EX = exhaust')
   +`<label class="f" data-tip="Pipe class / pipe spec. Manage the list in Project → Pipe classes."><span>Pipe class</span><select data-f="spec">${specOpts}</select></label>`
-  +inp('From','from','','Where the line starts, e.g. Nozzle A, Pump P-1109A')
+  +inp('From','from','','Where the line starts, e.g. Nozzle A, Pump P-101')
   +inp('To','to')
   +inp('Design P (bar)','dp','inputmode="decimal"')+inp('Design T (°C)','dt','inputmode="decimal"')+inp('Test P (bar)','tp','inputmode="decimal"')
   +inp('Insulation','insul','list="dlIns"')
   +`<label class="f"><span>Tracing</span><input type="checkbox" data-f="tracing" ${items.every(i=>i.tracing)?'checked':''}></label>`
   +inp('Remarks','remarks');
 }
+function textFields(it,label='Text'){
+ return `<h4>${label}</h4>`+fld('Size (%)','ts',it.ts??'','number','min="30" max="400" step="10" placeholder="100"','Size of this item\'s text, relative to the project text size')
+  +`<div class="f" data-tip="Move the text by dragging the orange ◆ handle, or type an offset in mm"><span>Offset X / Y</span><div class="two"><input type="number" step="0.5" data-f="tdx" value="${esc(it.tdx??'')}" placeholder="0"><input type="number" step="0.5" data-f="tdy" value="${esc(it.tdy??'')}" placeholder="0"></div></div>`
+  +`<div class="row"><button class="btn sm" data-act="resettext">Reset text position &amp; size</button></div>`;
+}
+function attachField(it){
+ const n=attachCount(it);
+ return `<label class="f" data-tip="When attached, lines that end on this object (or run through it) move along when you move it. Only possible while a line touches the object."><span>Attached</span><span style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="attached" ${it.attached?'checked':''} ${!n&&!it.attached?'disabled':''}><span class="hint">${n?`${n} line connection${n>1?'s':''}`:'not touching a line'}</span></span></label>`;
+}
 function renderPane(){
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
  const p=$('#pane');
  if(tab==='project')return renderProject(p);
- if(!sel.size){p.innerHTML=`<p class="hint">Nothing selected.</p><p class="hint">Pick a tool or search for a symbol on the left. Symbols snap onto pipes and cut the pipe where they sit, also in the PDF and DXF. Hover over anything for a tip.</p><p class="hint"><b>Multiple sheets:</b> add a sheet with ＋ at the bottom of the drawing. Continue a line with the off-page connector (O): place it on the line end on both sheets with the same number – sheet reference and line number are filled in automatically. Unmatched connectors show orange.</p><p class="hint"><b>Line list:</b> select pipes and fill in their line data here. Select several lines to edit them at once.</p><p class="hint"><b>Keys:</b> V select · P pipe · L signal · E electric · I instrument · O off-page · T text · Q box · B boundary · R rotate · F mirror · Ctrl+F search · Ctrl+Z / Ctrl+Y · Ctrl+D duplicate · Ctrl+S save</p>`;return}
+ if(selBlock){
+  const o=(S().pos||{})[selBlock]||[0,0];
+  p.innerHTML=`<h4>${BLOCKS[selBlock]}</h4><p class="hint">Drag it on the sheet, or type the shift from its standard position (mm). Positions are saved per sheet.</p>`
+   +`<div class="f"><span>Shift X / Y</span><div class="two"><input type="number" step="2.5" data-f="bx" value="${o[0]}"><input type="number" step="2.5" data-f="by" value="${o[1]}"></div></div>`
+   +`<div class="row"><button class="btn sm" data-act="blkreset">Reset position</button><button class="btn sm" data-act="blkall" data-tip="Use this position on every sheet">Apply to all sheets</button></div>`
+   +(selBlock==='title'?'<p class="hint">The revision and nozzle tables follow the title block unless you move them separately.</p>':'');return}
+ if(!sel.size){p.innerHTML=`<p class="hint">Nothing selected.</p><p class="hint">Pick a tool or search for a symbol on the left. Symbols snap onto pipes and cut the pipe where they sit, also in the PDF and DXF. Hover over anything for a tip.</p><p class="hint"><b>Lines:</b> select a line, then drag a round handle to move that segment. Connected lines only stretch horizontally or vertically.</p><p class="hint"><b>Attach:</b> tick "Attached" on an object that touches a line, and its lines move with it.</p><p class="hint"><b>Tables:</b> click the title block, legend, revision, nozzle or notes table and drag it.</p><p class="hint"><b>Multiple sheets:</b> ＋ at the bottom; continue a line with the off-page connector (O).</p><p class="hint"><b>Keys:</b> V select · P pipe · L signal · E electric · I instrument · O off-page · T text · Q box · B boundary · R rotate · F mirror · Ctrl+F search · Ctrl+Z / Ctrl+Y · Ctrl+D duplicate · Ctrl+S save</p>`;return}
  const items=[...sel].map(byId).filter(Boolean);
  if(items.length>1){
   const allLines=items.every(i=>i.k==='line');
-  p.innerHTML=`<p><b>${items.length} items selected</b></p><div class="row"><button class="btn sm" data-act="rot">Rotate 90°</button><button class="btn sm" data-act="dup">Duplicate</button><button class="btn sm" data-act="del">Delete</button></div>`+(allLines?DL()+lineDataFields(items)+'<p class="hint">Changes apply to all selected lines. Empty fields marked (mixed) are left as they are.</p>':'');return}
+  p.innerHTML=`<p><b>${items.length} items selected</b></p><div class="row"><button class="btn sm" data-act="rot">Rotate 90°</button><button class="btn sm" data-act="dup">Duplicate</button><button class="btn sm" data-act="del">Delete</button></div>`+(allLines?DL()+lineDataFields(items)+'<p class="hint">Changes apply to all selected lines. Fields marked (mixed) are left as they are.</p>':'');return}
  const it=items[0];if(!it){sel.clear();return renderPane()}
  let h=DL();
  if(it.k==='sym'){
   h+=`<h4>Symbol</h4>`+sfld('Type','s',it.s,Object.fromEntries(Object.entries(SYMS).map(([k,d])=>[k,d.n])))+fld(it.s==='nozzle'?'Letter':'Tag','tag',it.tag||'','text','',it.s==='nozzle'?'Letter from the piping interfaces table':'Tag number shown next to the symbol, e.g. V-101');
   if(it.s!=='nozzle')h+=sfld('Tag position','tagPos',it.tagPos||'above',{above:'Above',below:'Below',left:'Left',right:'Right'});
-  h+=sfld('Rotation','rot',it.rot||0,{0:'0°',90:'90°',180:'180°',270:'270°'},'Shortcut: R')+fld('Mirror','flip',it.flip,'checkbox','','Shortcut: F');
+  h+=sfld('Rotation','rot',it.rot||0,{0:'0°',90:'90°',180:'180°',270:'270°'},'Shortcut: R')+fld('Mirror','flip',it.flip,'checkbox','','Shortcut: F')+attachField(it);
   if(SYMS[it.s].note)h+=`<p class="hint">${esc(SYMS[it.s].note)}</p>`;
+  if(it.tag&&it.s!=='nozzle')h+=textFields(it,'Tag text');
  }else if(it.k==='inst'){
-  h+=`<h4>Instrument</h4><label class="f" data-tip="Instrument code, e.g. PI, PS, PT, LS. Custom codes are allowed and appear in the legend as typed."><span>Code</span><input data-f="code" list="instcodes" value="${esc(it.code||'')}"></label>`
-   +fld('Number','num',it.num||'')+fld('Panel mounted','panel',it.panel,'checkbox','','Draws a line through the bubble')+`<p class="hint">${esc(INST[it.code]||'Custom code – shown in the legend as typed.')}</p>`;
+  h+=`<h4>Instrument</h4><label class="f" data-tip="Instrument code, e.g. PI, PS, PT, LS. Custom codes are allowed and appear in the legend as typed."><span>Code</span><input data-f="code" list="instcodes" autocomplete="off" value="${esc(it.code||'')}"></label>`
+   +fld('Number','num',it.num||'')+fld('Panel mounted','panel',it.panel,'checkbox','','Draws a line through the bubble')+attachField(it)
+   +fld('Text size (%)','ts',it.ts??'','number','min="30" max="400" step="10" placeholder="100"')+`<p class="hint">${esc(INST[it.code]||'Custom code – shown in the legend as typed.')}</p>`;
  }else if(it.k==='line'){
   const proc=PROCESS.has(it.style||'pipe');
   h+=`<h4>Line</h4>`+sfld('Style','style',it.style||'pipe',Object.fromEntries(Object.entries(LS).map(([k,v])=>[k,v.n])))
    +sfld('Label','labelMode',labelMode(it),{auto:'Line designation (auto)',custom:'Custom text',none:'No label'},'Auto builds the label from size, medium, line no. and pipe class (format in Project tab)');
   if(labelMode(it)==='custom')h+=fld('Label text','label',it.label||'');
-  else if(labelMode(it)==='auto')h+=`<p class="hint">Shown as: <b>${esc(lineDesig(it)||'(fill in line data)')}</b></p>`;
+  else if(labelMode(it)==='auto')h+=`<p class="hint">Shown as: <b id="desigPreview">${esc(lineDesig(it)||'(fill in line data)')}</b></p>`;
   h+=fld('Label at (%)','labelAt',it.labelAt??'','number','min="0" max="100" step="5" placeholder="auto"','Position of the label along the longest segment. Empty = automatic, avoiding symbols.')+fld('Label other side','labelFlip',it.labelFlip,'checkbox')+fld('Arrow at end','arrowEnd',it.arrowEnd,'checkbox')+fld('Arrow at start','arrowStart',it.arrowStart,'checkbox');
+  if(lineLabel(it))h+=textFields(it,'Label text');
   if(proc)h+=lineDataFields([it]);
-  h+=`<p class="hint">${it.pts.length} points. Drag a square handle to move a point, Alt+click to remove it, double-click the line to add one.</p><div class="row"><button class="btn sm" data-act="rev">Reverse direction</button></div>`;
+  h+=`<p class="hint">${it.pts.length} points. Round handle: move a segment (connected lines stretch H/V). Square handle: move a corner, Alt+click removes it. Double-click the line to add a corner.</p><div class="row"><button class="btn sm" data-act="rev">Reverse direction</button></div>`;
  }else if(it.k==='opc'){
   const {lines,pr}=opcTexts(it);
   h+=`<h4>Off-page connector</h4>`+fld('Number','ref',it.ref||'','text','','Connectors with the same number on different sheets belong together')
    +sfld('Direction','dir',it.dir||'out',{out:'Out – flow leaves this sheet',in:'In – flow comes from another sheet'})
    +sfld('Rotation','rot',it.rot||0,{0:'0° (flag to the right)',90:'90° (down)',180:'180° (left)',270:'270° (up)'})
-   +fld('Note','note',it.note||'','text','placeholder="optional, e.g. to engine"');
+   +fld('Note','note',it.note||'','text','placeholder="optional, e.g. to engine"')+attachField(it);
   h+=`<p class="hint">Shows: <b>${esc(lines.join(' · '))}</b></p>`;
   if(pr)h+=`<div class="box">Continues on <b>sheet ${pr.sheet+1}: ${esc(D.sheets[pr.sheet].name)}</b><div class="row"><button class="btn sm" data-act="gopartner">Go to partner</button></div></div>`;
-  else h+=`<div class="box warnbox">No connector with number ${esc(it.ref||'?')} on another sheet.${D.sheets.length>1?`<div class="row" style="color:var(--ink)"><select id="partnerSheet">${D.sheets.map((s,i)=>i===cs?'':`<option value="${i}">${i+1}. ${esc(s.name)}</option>`).join('')}</select><button class="btn sm" data-act="mkpartner">Create partner</button></div>`:'<br>Add a sheet first (＋ at the bottom).'}</div>`;
+  else h+=`<div class="box warnbox"><span class="t">No connector with number ${esc(it.ref||'?')} on another sheet.</span>${D.sheets.length>1?`<div class="row"><select id="partnerSheet">${D.sheets.map((s,i)=>i===cs?'':`<option value="${i}">${i+1}. ${esc(s.name)}</option>`).join('')}</select><button class="btn sm" data-act="mkpartner">Create partner</button></div>`:'<br>Add a sheet first (＋ at the bottom).'}</div>`;
+  h+=textFields(it,'Connector text');
  }else if(it.k==='text'){
-  h+=`<h4>Text</h4>`+fld('Text','text',it.text||'','textarea')+fld('Height (mm)','h',it.h||2.5,'number','step="0.1" min="0.5"')+sfld('Align','align',it.align||'left',{left:'Left',center:'Center',right:'Right'})+sfld('Angle','ang',it.ang||0,{0:'Horizontal',90:'Vertical'})+fld('Frame','box',it.box,'checkbox','','Frame around the text, e.g. for alarm tags');
+  h+=`<h4>Text</h4>`+fld('Text','text',it.text||'','textarea')+fld('Height (mm)','h',it.h||2.5,'number','step="0.1" min="0.5"')+sfld('Align','align',it.align||'left',{left:'Left',center:'Center',right:'Right'})+sfld('Angle','ang',it.ang||0,{0:'Horizontal',90:'Vertical'})+fld('Frame','box',it.box,'checkbox','','Frame around the text, e.g. for alarm tags')+(it.box?attachField(it):'');
  }else if(it.k==='rect'){
-  h+=`<h4>Box</h4>`+sfld('Style','style',it.style||'solid',Object.fromEntries(Object.entries(RS).map(([k,v])=>[k,v.n])))+fld('Label','label',it.label||'','textarea')+sfld('Label position','labelPos',it.labelPos||'center',{center:'Center',top:'Top',topleft:'Top left'})+fld('Text height','th',it.th||'','number','step="0.1" placeholder="auto"')
+  h+=`<h4>Box</h4>`+sfld('Style','style',it.style||'solid',Object.fromEntries(Object.entries(RS).map(([k,v])=>[k,v.n])))+fld('Label','label',it.label||'','textarea')+sfld('Label position','labelPos',it.labelPos||'center',{center:'Center',top:'Top',topleft:'Top left'})+fld('Text height','th',it.th||'','number','step="0.1" placeholder="auto"')+attachField(it)
    +fld('X','x',+it.x.toFixed(2),'number','step="2.5"')+fld('Y','y',+it.y.toFixed(2),'number','step="2.5"')+fld('Width','w',+it.w.toFixed(2),'number','step="2.5"')+fld('Height','hh',+it.h.toFixed(2),'number','step="2.5"');
+  if(it.label)h+=textFields(it,'Label text');
  }
  h+=`<div class="row"><button class="btn sm" data-act="dup">Duplicate</button><button class="btn sm" data-act="front">To front</button><button class="btn sm" data-act="del">Delete</button></div>`;
  p.innerHTML=h;
 }
 function renderProject(p){
- const m=D.meta;
+ const m=D.meta,co=D.company||{};
  let h=`<h4>Sheet ${cs+1} of ${D.sheets.length}</h4>`+fld('Sheet name','s.name',S().name,'text','','Shown in the title block and on the sheet tabs')
-  +`<div class="row"><button class="btn sm" data-act="addsheet">＋ Add</button><button class="btn sm" data-act="dupsheet">Duplicate</button><button class="btn sm" data-act="msl" data-tip="Move sheet left">◀</button><button class="btn sm" data-act="msr" data-tip="Move sheet right">▶</button><button class="btn sm" data-act="delsheet">Delete</button></div>`;
- h+=`<h4>Drawing</h4>`+[['Title','title'],['Client','client'],['Location','location'],['Project no.','projectNo'],['Drawing no.','drawingNo'],['Company','company'],['Drawn by','drawnBy'],['Date','date'],['Scale','scale']].map(([l,k])=>fld(l,'m.'+k,m[k]||'')).join('')
+  +`<div class="row"><button class="btn sm" data-act="addsheet">＋ Add</button><button class="btn sm" data-act="dupsheet">Duplicate</button><button class="btn sm" data-act="msl" data-tip="Move sheet left">◀</button><button class="btn sm" data-act="msr" data-tip="Move sheet right">▶</button><button class="btn sm" data-act="delsheet">Delete</button><button class="btn sm" data-act="resetpos" data-tip="Put all tables back in their standard place on this sheet">Reset tables</button></div>`;
+ h+=`<h4>Company (title block)</h4>`+fld('Company','c.name',co.name||'')+fld('Address','c.address',co.address||'','textarea','rows="2" placeholder="Street, city"')+fld('Contact','c.contact',co.contact||'','text','placeholder="phone · e-mail · web"')
+  +`<p class="hint">${co.file?`From format <b>${esc(co.file)}</b>. `:''}Choose a saved company format, or save these details as one.</p><div class="row"><button class="btn sm pri" data-act="fmtchoose">Choose format…</button><button class="btn sm" data-act="fmtsave">Save as format…</button></div>`;
+ h+=`<h4>Drawing</h4>`+[['Title','title'],['Client','client'],['Location','location'],['Project no.','projectNo'],['Drawing no.','drawingNo'],['Drawn by','drawnBy'],['Date','date'],['Scale','scale']].map(([l,k])=>fld(l,'m.'+k,m[k]||'')).join('')
   +sfld('Format','m.format',m.format,{A0:'A0 (1189×841)',A1:'A1 (841×594)',A2:'A2 (594×420)',A3:'A3 (420×297)'},'Same format for all sheets')
-  +fld('Symbol scale','m.symScale',m.symScale||1,'number','step="0.05" min="0.3" max="3"','Size of symbols and their text. 1 suits A0.')
+  +fld('Symbol scale','m.symScale',m.symScale||1,'number','step="0.05" min="0.3" max="3"','Size of symbols. 1 suits A0.')
+  +fld('Text size (%)','m.textScale',m.textScale||100,'number','step="10" min="30" max="400"','Size of all tags, line labels, connector and instrument texts. Each item can be adjusted further.')
+  +fld('Label gap (mm)','m.labelGap',m.labelGap||0,'number','step="0.5" min="-5" max="20"','Extra distance between a line or symbol and its label')
   +fld('Show legend','m.showLegend',m.showLegend!==false,'checkbox','','Per sheet, only the symbols used on that sheet')
   +fld('Nozzle table','m.showNozzles',m.showNozzles!==false,'checkbox')
   +fld('…on all sheets','m.nozzlesAll',m.nozzlesAll,'checkbox','','Off = only on sheet 1')
   +fld('Line label','m.lineFmt',m.lineFmt||'','text','placeholder="{size}-{medium}-{no}-{spec}"','Format of the automatic line designation. Tokens: {size} {medium} {no} {spec}. Empty values are skipped with their separator.');
- h+=`<h4>Revisions</h4><div class="f"><span>Current rev.</span><div class="two"><input data-f="m.rev" value="${esc(m.rev)}" style="width:50px"><input data-f="m.revDate" value="${esc(m.revDate)}"></div></div>
+ h+=`<h4>Revisions</h4><div class="f"><span>Current rev.</span><div class="two"><input data-f="m.rev" autocomplete="off" value="${esc(m.rev)}" style="width:50px"><input data-f="m.revDate" autocomplete="off" value="${esc(m.revDate)}"></div></div>
  <table class="tbl"><tr><th style="width:44px">Rev</th><th style="width:88px">Date</th><th>Description</th><th></th></tr>${D.revisions.map((r,i)=>`<tr><td><input data-r="${i}" data-rf="rev" value="${esc(r.rev)}"></td><td><input data-r="${i}" data-rf="date" value="${esc(r.date)}"></td><td><input data-r="${i}" data-rf="desc" value="${esc(r.desc)}"></td><td><button class="x" data-act="delrev" data-i="${i}">✕</button></td></tr>`).join('')}</table>
  <button class="btn sm" data-act="newrev" data-tip="Adds the next revision letter with today's date and makes it current">+ New revision</button>`;
  h+=`<h4>Pipe classes</h4><table class="tbl"><tr><th style="width:44px">Code</th><th>Description</th><th style="width:52px">Rating</th><th>Material</th><th></th></tr>${D.specs.map((s,i)=>`<tr><td><input data-sp="${i}" data-spf="code" value="${esc(s.code)}"></td><td><input data-sp="${i}" data-spf="desc" value="${esc(s.desc)}"></td><td><input data-sp="${i}" data-spf="rating" value="${esc(s.rating)}"></td><td><input data-sp="${i}" data-spf="material" value="${esc(s.material)}"></td><td><button class="x" data-act="delspec" data-i="${i}">✕</button></td></tr>`).join('')}</table>
@@ -911,31 +1056,40 @@ function paneEdit(e){
  if(t.dataset.n!==undefined){D.nozzles[+t.dataset.n][t.dataset.nf]=v;renderFrame();return}
  if(t.dataset.sp!==undefined){D.specs[+t.dataset.sp][t.dataset.spf]=v;renderItems();return}
  const f=t.dataset.f;if(!f)return;
+ if(f==='bx'||f==='by'){S().pos=S().pos||{};const o=S().pos[selBlock]||[0,0];S().pos[selBlock]=f==='bx'?[+v||0,o[1]]:[o[0],+v||0];renderFrame();renderSel();return}
  if(f==='notes'){D.notes=v;renderFrame();return}
  if(f==='s.name'){S().name=v;renderFrame();renderSheetbar();return}
- if(f.startsWith('m.')){const k=f.slice(2);D.meta[k]=v;renderFrame();if(['symScale','lineFmt'].includes(k))renderItems();if(k==='format'){renderItems();fit()}updTitle();return}
+ if(f.startsWith('c.')){D.company[f.slice(2)]=v;renderFrame();return}
+ if(f.startsWith('m.')){const k=f.slice(2);D.meta[k]=v;renderFrame();if(['symScale','lineFmt','textScale','labelGap'].includes(k))renderItems();if(k==='format'){renderItems();fit()}updTitle();return}
  const items=[...sel].map(byId).filter(Boolean);if(!items.length)return;
  for(const it of items){
   if(items.length>1&&it.k!=='line')continue;
   if(f==='hh')it.h=+v||1;else if(f==='rot')it.rot=+v;else if(f==='ang')it.ang=+v;else it[f]=v;
  }
  renderItems();renderFrame();
- if(['labelMode','style','s','dir','ref'].includes(f))renderPane();
- else if(items.length===1&&items[0].k==='line'&&['lineNo','size','medium','spec'].includes(f)){const hEl=$('#pane .hint b');if(hEl&&labelMode(items[0])==='auto')hEl.textContent=lineDesig(items[0])||'(fill in line data)'}
+ if(['labelMode','style','s','dir','ref','tag','box','label'].includes(f)&&e.type==='change')renderPane();
+ else if(['labelMode','style','s','dir'].includes(f))renderPane();
+ else if(items.length===1&&items[0].k==='line'&&['lineNo','size','medium','spec'].includes(f)){const hEl=$('#desigPreview');if(hEl)hEl.textContent=lineDesig(items[0])||'(fill in line data)'}
 }
 $('#pane').addEventListener('input',paneEdit);
-$('#pane').addEventListener('change',e=>{if(e.target.matches('select,input[type=checkbox]'))paneEdit(e)});
+$('#pane').addEventListener('change',e=>{if(e.target.matches('select,input[type=checkbox]'))paneEdit(e);else if(e.target.matches('[data-f="tag"],[data-f="label"]'))renderPane()});
 $('#pane').addEventListener('click',e=>{
  const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,i=+b.dataset.i;
  const it=byId([...sel][0]);
  if(a==='del')delSel();else if(a==='dup')dupSel();else if(a==='rot')rotSel();
  else if(a==='rev'){pushHist();it.pts.reverse();renderItems()}
  else if(a==='front'){pushHist();S().items=IT().filter(x=>x!==it).concat(it);renderItems()}
+ else if(a==='resettext'){pushHist();delete it.tdx;delete it.tdy;delete it.ts;renderItems();renderPane()}
  else if(a==='nextno'){pushHist();let mx=0,w=3;D.sheets.forEach(s=>s.items.forEach(l=>{if(l.k==='line'&&l.lineNo){const n=parseInt(String(l.lineNo).replace(/\D/g,''),10);if(n>mx)mx=n;w=Math.max(w,String(l.lineNo).length)}}));it.lineNo=String(mx+1).padStart(Math.min(w,3),'0');renderItems();renderPane()}
  else if(a==='gopartner'){const pr=opcPartner(it);if(pr)goTo(pr.sheet,pr.item.id)}
- else if(a==='mkpartner'){const si=+$('#partnerSheet').value;pushHist();if(!it.ref)it.ref=nextOpcRef();const [W]=sheet();
-  const np={id:uid(),k:'opc',ref:it.ref,dir:it.dir==='in'?'out':'in',rot:((it.rot||0)+180)%360,x:(it.rot||0)%180===0?W-it.x:it.x,y:(it.rot||0)%180===0?it.y:sheet()[1]-it.y};
+ else if(a==='mkpartner'){const si=+$('#partnerSheet').value;pushHist();if(!it.ref)it.ref=nextOpcRef();const [W,H]=sheet();
+  const np={id:uid(),k:'opc',ref:it.ref,dir:it.dir==='in'?'out':'in',rot:((it.rot||0)+180)%360,x:(it.rot||0)%180===0?W-it.x:it.x,y:(it.rot||0)%180===0?it.y:H-it.y};
   D.sheets[si].items.push(np);goTo(si,np.id);toast('Partner created – connect a line to it')}
+ else if(a==='blkreset'){pushHist();delete S().pos[selBlock];renderFrame();renderSel();renderPane()}
+ else if(a==='blkall'){pushHist();const o=S().pos[selBlock];D.sheets.forEach(s=>{s.pos=s.pos||{};if(o)s.pos[selBlock]=[...o];else delete s.pos[selBlock]});toast('Position applied to all sheets')}
+ else if(a==='resetpos'){pushHist();S().pos={};selBlock=null;renderFrame();renderSel()}
+ else if(a==='fmtchoose')openFormatDialog();
+ else if(a==='fmtsave')saveFormat();
  else if(a==='addsheet')addSheet();else if(a==='dupsheet')addSheet(true);else if(a==='delsheet')delSheet();else if(a==='msl')moveSheet(-1);else if(a==='msr')moveSheet(1);
  else if(a==='newrev'){pushHist();const last=D.meta.rev||'';const nx=/^\d+$/.test(last)&&last!=='0'?String(+last+1):last==='0'||!last?'A':String.fromCharCode(last.charCodeAt(0)+1);D.revisions.push({rev:nx,date:today(),desc:''});D.meta.rev=nx;D.meta.revDate=today();renderAll()}
  else if(a==='delrev'){pushHist();D.revisions.splice(i,1);renderAll()}
@@ -947,14 +1101,14 @@ $('#pane').addEventListener('click',e=>{
 document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');if(b){tab=b.dataset.tab;renderPane()}};
 
 /* ---------------- editing ops ---------------- */
-function addItem(it,select=true){pushHist();it.id=uid();IT().push(it);if(select)sel=new Set([it.id]);renderItems();renderFrame();renderPane();renderSheetbar();return it}
+function addItem(it,select=true){pushHist();it.id=uid();IT().push(it);if(select){sel=new Set([it.id]);selBlock=null}renderItems();renderFrame();renderPane();renderSheetbar();return it}
 function delSel(){if(!sel.size)return;pushHist();S().items=IT().filter(i=>!sel.has(i.id));sel.clear();renderItems();renderFrame();renderPane();renderSheetbar()}
 function moveItem(it,dx,dy){if(it.k==='line')it.pts=it.pts.map(p=>[p[0]+dx,p[1]+dy]);else{it.x+=dx;it.y+=dy}}
-function dupSel(off=5){if(!sel.size)return;pushHist();const n=[];sel.forEach(id=>{const c=JSON.parse(JSON.stringify(byId(id)));c.id=uid();moveItem(c,off,off);IT().push(c);n.push(c.id)});sel=new Set(n);renderItems();renderFrame();renderPane()}
+function dupSel(off=5){if(!sel.size)return;pushHist();const n=[];sel.forEach(id=>{const c=JSON.parse(JSON.stringify(byId(id)));c.id=uid();c.attached=false;moveItem(c,off,off);IT().push(c);n.push(c.id)});sel=new Set(n);renderItems();renderFrame();renderPane()}
 function rotSel(){if(!sel.size)return;pushHist();sel.forEach(id=>{const it=byId(id);if(it.k==='sym'||it.k==='opc')it.rot=((it.rot||0)+90)%360;else if(it.k==='text')it.ang=it.ang?0:90});renderItems();renderPane()}
 function flipSel(){if(!sel.size)return;pushHist();sel.forEach(id=>{const it=byId(id);if(it.k==='sym')it.flip=!it.flip});renderItems();renderPane()}
 function copySel(){clip=[...sel].map(id=>JSON.parse(JSON.stringify(byId(id))));toast(clip.length+' copied')}
-function paste(){if(!clip)return;pushHist();const n=[];clip.forEach(c=>{const x=JSON.parse(JSON.stringify(c));x.id=uid();moveItem(x,10,10);IT().push(x);n.push(x.id)});clip.forEach(c=>moveItem(c,10,10));sel=new Set(n);renderItems();renderFrame();renderPane();renderSheetbar()}
+function paste(){if(!clip)return;pushHist();const n=[];clip.forEach(c=>{const x=JSON.parse(JSON.stringify(c));x.id=uid();x.attached=false;moveItem(x,10,10);IT().push(x);n.push(x.id)});clip.forEach(c=>moveItem(c,10,10));sel=new Set(n);renderItems();renderFrame();renderPane();renderSheetbar()}
 
 /* ---------------- pointer interaction ---------------- */
 function toWorld(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return {x:q.x,y:q.y}}
@@ -996,7 +1150,7 @@ function placeOpc(sp){
  const s=ss();let rot=0,x=sp.x+5*s,y=sp.y;
  if(sp.line&&sp.end>=0){const pts=sp.line.pts,a=sp.end===1?pts[pts.length-2]:pts[1],b=sp.end===1?pts[pts.length-1]:pts[0];
   const ang=Math.round(Math.atan2(b[1]-a[1],b[0]-a[0])*2/Math.PI);rot=((ang*90)%360+360)%360;const r=rot*Math.PI/180;x=b[0]+Math.cos(r)*5*s;y=b[1]+Math.sin(r)*5*s;
-  const it=addItem({k:'opc',ref:nextOpcRef(),dir:sp.end===1?'out':'in',rot,x,y});return it}
+  return addItem({k:'opc',ref:nextOpcRef(),dir:sp.end===1?'out':'in',rot,x,y,attached:true})}
  return addItem({k:'opc',ref:nextOpcRef(),dir:'out',rot,x,y});
 }
 const pointers=new Map();let pinch=null,hoverId=null;
@@ -1008,14 +1162,20 @@ svg.addEventListener('pointerdown',e=>{
  if(e.button===1||tool==='pan'||spaceDown){drag={mode:'pan',sx:e.clientX,sy:e.clientY,v:{...view}};svg.style.cursor='grabbing';return}
  if(e.button===2){if(draft)finishDraft();return}
  if(tool==='select'){
-  const h=e.target.closest('[data-vi],[data-rs]');
-  if(h){const it=byId(h.dataset.id);
-   if(h.dataset.vi!==undefined&&e.altKey&&it.pts.length>2){pushHist();it.pts.splice(+h.dataset.vi,1);renderItems();return}
-   pushHist();drag={mode:h.dataset.rs?'resize':'vertex',it,i:+h.dataset.vi};return}
+  const h=e.target.closest('[data-vi],[data-rs],[data-seg],[data-lbl]');
+  if(h){const it=byId(h.dataset.id),before=snapState();
+   if(h.dataset.vi!==undefined){if(e.altKey&&it.pts.length>2){pushHist();it.pts.splice(+h.dataset.vi,1);renderItems();renderPane();return}drag={mode:'vertex',id:it.id,i:+h.dataset.vi,before};return}
+   if(h.dataset.rs){drag={mode:'resize',id:it.id,before};return}
+   if(h.dataset.seg!==undefined){const i=+h.dataset.seg;drag={mode:'seg',id:it.id,i,hor:isHor(it.pts[i-1],it.pts[i]),start:w,snap:JSON.stringify(IT()),before};return}
+   if(h.dataset.lbl){drag={mode:'label',id:it.id,start:w,o:[+it.tdx||0,+it.tdy||0],before};return}
+  }
   const g=e.target.closest('[data-id]');
-  if(g){const id=g.dataset.id;
+  if(g){const id=g.dataset.id;selBlock=null;
    if(e.shiftKey){sel.has(id)?sel.delete(id):sel.add(id)}else if(!sel.has(id))sel=new Set([id]);
-   renderItems();renderPane();drag={mode:'move',start:w,dx:0,dy:0};return}
+   renderItems();renderPane();drag={mode:'move',start:w,dx:0,dy:0,snap:JSON.stringify(IT()),before:snapState()};return}
+  const bk=e.target.closest('[data-block]');
+  if(bk){selBlock=bk.dataset.block;sel.clear();tab='props';renderItems();renderPane();S().pos=S().pos||{};const o=S().pos[selBlock]||[0,0];drag={mode:'block',name:selBlock,start:w,o:[...o],before:snapState()};return}
+  if(selBlock){selBlock=null;renderSel();renderPane()}
   if(!e.shiftKey){sel.clear();renderItems();renderPane()}
   drag={mode:'marq',start:w};return;
  }
@@ -1041,19 +1201,24 @@ svg.addEventListener('pointermove',e=>{
   view.w=v.w*k;view.h=v.h*k;view.x=wx-(mx-r.left)/r.width*view.w;view.y=wy-(my-r.top)/r.height*view.h;setView();return}
  const w=toWorld(e);$('#coords').textContent=`x ${w.x.toFixed(1)} · y ${w.y.toFixed(1)}`;
  if(!drag){
-  if(tool==='select'&&opt.tips&&e.pointerType!=='touch'){const g=e.target.closest('[data-id]');const id=g?g.dataset.id:null;
+  if(tool==='select'&&opt.tips&&e.pointerType!=='touch'){const g=e.target.closest('[data-id]');const id=g&&!e.target.closest('#gSel')?g.dataset.id:null;
    if(id!==hoverId){hoverId=id;clearTimeout(tipT);tip.classList.remove('show');if(id){tipT=setTimeout(()=>{const it=byId(id);if(it&&hoverId===id)showTip(itemTip(it),e.clientX+14,e.clientY+16)},450)}}}
   if(tool==='line'&&draft){const sp=snapPt(w);renderDraft(orthoPt(draft.pts[draft.pts.length-1],sp,e.shiftKey))}else if(['sym','inst','text','rect','line','opc'].includes(tool))renderDraft(snapPt(w));return}
  hideTip();
+ const dX=w.x-(drag.start?.x??0),dY=w.y-(drag.start?.y??0);
  if(drag.mode==='pan'){const k=view.w/svg.clientWidth;view.x=drag.v.x-(e.clientX-drag.sx)*k;view.y=drag.v.y-(e.clientY-drag.sy)*k;setView();return}
  if(drag.mode==='move'){
-  let dx=w.x-drag.start.x,dy=w.y-drag.start.y;if(opt.snap){dx=gr(dx);dy=gr(dy)}
+  let dx=dX,dy=dY;if(opt.snap){dx=gr(dx);dy=gr(dy)}
   if(e.shiftKey&&opt.ortho){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0}
-  drag.dx=dx;drag.dy=dy;
-  document.querySelectorAll('#gItems .it.sel').forEach(g=>g.setAttribute('transform',`translate(${dx} ${dy})`));
-  $('#gSel').setAttribute('transform',`translate(${dx} ${dy})`);return}
- if(drag.mode==='vertex'){const sp=snapPt(w,new Set([drag.it.id]));drag.it.pts[drag.i]=[sp.x,sp.y];renderItems();renderDraft(sp);return}
- if(drag.mode==='resize'){const sp=snapPt(w);drag.it.w=Math.max(GRID,sp.x-drag.it.x);drag.it.h=Math.max(GRID,sp.y-drag.it.y);renderItems();return}
+  if(dx===drag.dx&&dy===drag.dy)return;drag.dx=dx;drag.dy=dy;
+  S().items=JSON.parse(drag.snap);applyMove(sel,dx,dy);renderItems();return}
+ if(drag.mode==='seg'){
+  const d=gr(drag.hor?dY:dX);if(d===drag.d)return;drag.d=d;
+  S().items=JSON.parse(drag.snap);const l=byId(drag.id);moveSegment(l,drag.i,d,IT());renderItems();return}
+ if(drag.mode==='label'){const it=byId(drag.id);it.tdx=Math.round((drag.o[0]+dX)*2)/2;it.tdy=Math.round((drag.o[1]+dY)*2)/2;drag.moved=true;renderItems();return}
+ if(drag.mode==='block'){const nx=drag.o[0]+gr(dX),ny=drag.o[1]+gr(dY);S().pos[drag.name]=[nx,ny];drag.moved=true;renderFrame();renderSel();return}
+ if(drag.mode==='vertex'){const it=byId(drag.id),sp=snapPt(w,new Set([drag.id]));it.pts[drag.i]=[sp.x,sp.y];drag.moved=true;renderItems();renderDraft(sp);return}
+ if(drag.mode==='resize'){const it=byId(drag.id),sp=snapPt(w);it.w=Math.max(GRID,sp.x-it.x);it.h=Math.max(GRID,sp.y-it.y);drag.moved=true;renderItems();return}
  if(drag.mode==='marq'||drag.mode==='rect'){
   const s=drag.start,c=drag.mode==='rect'?snapPt(w):w;drag.cur=c;const k=px();
   $('#gDraft').innerHTML=`<rect class="${drag.mode==='marq'?'marq':''}" x="${Math.min(s.x,c.x)}" y="${Math.min(s.y,c.y)}" width="${Math.abs(c.x-s.x)}" height="${Math.abs(c.y-s.y)}" fill="none" stroke-width="${drag.mode==='marq'?k:.35}"/>`;return}
@@ -1063,8 +1228,8 @@ svg.addEventListener('pointerup',e=>{
  pointers.delete(e.pointerId);if(pointers.size<2)pinch=null;
  if(!drag)return;const d=drag;drag=null;
  if(d.mode==='pan'){svg.style.cursor=tool==='pan'?'grab':'';return}
- if(d.mode==='move'){$('#gSel').removeAttribute('transform');if(d.dx||d.dy){pushHist();sel.forEach(id=>moveItem(byId(id),d.dx,d.dy))}renderItems();renderFrame();renderPane();return}
- if(d.mode==='vertex'||d.mode==='resize'){$('#gDraft').innerHTML='';renderItems();renderFrame();renderPane();return}
+ if(d.mode==='move'||d.mode==='seg'){if(d.dx||d.dy||d.d)commit(d.before);renderItems();renderFrame();renderPane();renderSheetbar();return}
+ if(['vertex','resize','label','block'].includes(d.mode)){$('#gDraft').innerHTML='';if(d.moved)commit(d.before);if(d.mode==='block'){renderPane();return}renderItems();renderFrame();renderPane();return}
  if(d.mode==='marq'){$('#gDraft').innerHTML='';const s=d.start,c=d.cur||s;if(Math.abs(c.x-s.x)<.5&&Math.abs(c.y-s.y)<.5)return;
   const x1=Math.min(s.x,c.x),x2=Math.max(s.x,c.x),y1=Math.min(s.y,c.y),y2=Math.max(s.y,c.y),cross=c.x<s.x;
   IT().forEach(it=>{const b=bboxOf(itemPrims(it));const inside=b.x>=x1&&b.x+b.w<=x2&&b.y>=y1&&b.y+b.h<=y2;const hit=!(b.x>x2||b.x+b.w<x1||b.y>y2||b.y+b.h<y1);if(cross?hit:inside)sel.add(it.id)});
@@ -1072,10 +1237,10 @@ svg.addEventListener('pointerup',e=>{
  if(d.mode==='rect'){$('#gDraft').innerHTML='';const s=d.start,c=d.cur||s;const w=Math.abs(c.x-s.x),h=Math.abs(c.y-s.y);if(w<2||h<2)return;
   addItem({k:'rect',style:toolArg||'solid',x:Math.min(s.x,c.x),y:Math.min(s.y,c.y),w,h,label:'',labelPos:toolArg==='dashed'?'top':'center'});setTool('select');tab='props';renderPane();focusField('label')}
 });
-svg.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);pinch=null;drag=null});
+svg.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);pinch=null;if(drag&&drag.before&&(drag.dx||drag.dy||drag.d||drag.moved))commit(drag.before);drag=null});
 svg.addEventListener('dblclick',e=>{
  if(tool==='line'&&draft){finishDraft();return}
- if(tool==='select'){const g=e.target.closest('[data-id]');if(!g)return;const it=byId(g.dataset.id);
+ if(tool==='select'){const g=e.target.closest('[data-id]');if(!g)return;const it=byId(g.dataset.id);if(!it)return;
   if(it.k==='line'){
    const w=toWorld(e);let bi=-1,bd=3;for(let i=1;i<it.pts.length;i++){const [ax,ay]=it.pts[i-1],[bx,by]=it.pts[i],dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((w.x-ax)*dx+(w.y-ay)*dy)/l2)),d=Math.hypot(ax+t*dx-w.x,ay+t*dy-w.y);if(d<bd){bd=d;bi=i}}
    if(bi>0){pushHist();const sp=snapPt(w,new Set([it.id]));it.pts.splice(bi,0,[sp.x,sp.y]);renderItems()}}
@@ -1099,16 +1264,18 @@ document.addEventListener('keydown',e=>{
   else if(k==='d'){e.preventDefault();dupSel()}
   else if(k==='c'){copySel()}
   else if(k==='v'){paste()}
-  else if(k==='a'){e.preventDefault();sel=new Set(IT().map(i=>i.id));renderItems();renderPane()}
+  else if(k==='a'){e.preventDefault();sel=new Set(IT().map(i=>i.id));selBlock=null;renderItems();renderPane()}
   return;
  }
  if(e.key===' '){spaceDown=true;svg.style.cursor='grab';e.preventDefault();return}
- if(e.key==='Escape'){if(draft){draft=null;$('#gDraft').innerHTML='';$('#finish').style.display='none'}else if(tool!=='select')setTool('select');else{sel.clear();renderItems();renderPane()}return}
+ if(e.key==='Escape'){if(draft){draft=null;$('#gDraft').innerHTML='';$('#finish').style.display='none'}else if(tool!=='select')setTool('select');else{sel.clear();selBlock=null;renderItems();renderPane()}return}
  if(e.key==='Enter'){finishDraft();return}
  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delSel();return}
  if(e.key==='PageDown'){switchSheet(cs+1);return}
  if(e.key==='PageUp'){switchSheet(cs-1);return}
- if(e.key.startsWith('Arrow')&&sel.size){e.preventDefault();pushHist();const s=e.shiftKey?10:GRID;const dx=e.key==='ArrowLeft'?-s:e.key==='ArrowRight'?s:0,dy=e.key==='ArrowUp'?-s:e.key==='ArrowDown'?s:0;sel.forEach(id=>moveItem(byId(id),dx,dy));renderItems();return}
+ if(e.key.startsWith('Arrow')&&(sel.size||selBlock)){e.preventDefault();pushHist();const s=e.shiftKey?10:GRID;const dx=e.key==='ArrowLeft'?-s:e.key==='ArrowRight'?s:0,dy=e.key==='ArrowUp'?-s:e.key==='ArrowDown'?s:0;
+  if(selBlock){const o=S().pos[selBlock]||[0,0];S().pos[selBlock]=[o[0]+dx,o[1]+dy];renderFrame();renderSel();renderPane();return}
+  applyMove(sel,dx,dy);renderItems();return}
  const map={v:['select'],h:['pan'],p:['line','pipe'],l:['line','signal'],e:['line','elec'],i:['inst'],o:['opc'],t:['text'],q:['rect','solid'],b:['rect','dashed']};
  if(k==='r'&&sel.size){rotSel();return}
  if(k==='f'&&sel.size){flipSel();return}
@@ -1139,12 +1306,12 @@ function renderLL(){
  const noNo=llRows.filter(r=>!r.lineNo).length,conf=llRows.filter(r=>r.conflict.length).length,noSpec=llRows.filter(r=>r.lineNo&&!r.spec).length;
  $('#llCount').textContent=`· ${llRows.length} line${llRows.length===1?'':'s'}`;
  const w=[];if(noNo)w.push(`${noNo} line(s) without a line no.`);if(noSpec)w.push(`${noSpec} numbered line(s) without a pipe class`);if(conf)w.push(`${conf} line no.(s) with different size/medium/class on its segments`);
- $('#llWarn').innerHTML=w.length?`<div class="box warnbox">⚠ ${w.join(' · ')}</div>`:'';
+ $('#llWarn').innerHTML=w.length?`<div class="box warnbox"><span class="t">⚠ ${w.join(' · ')}</span></div>`:'';
  $('#llwrap').innerHTML=llRows.length?`<table class="ll"><thead><tr>${LL_COLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>${llRows.map((r,i)=>`<tr data-row="${i}">${LL_COLS.map(c=>`<td${r.conflict.includes(c[0])?' class="c" title="Differs between segments"':''}>${esc(r[c[0]]||(c[0]==='lineNo'?'—':''))}${r.conflict.includes(c[0])?' ⚠':''}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'<p class="hint" style="padding:12px">No lines yet. Draw pipes and fill in their line data in Properties.</p>';
 }
 $('#btnLL').onclick=()=>{if(draft)finishDraft();renderLL();$('#dlgLL').showModal()};
 $('#llAll').onchange=renderLL;
-$('#llwrap').onclick=e=>{const tr=e.target.closest('[data-row]');if(!tr)return;const r=llRows[+tr.dataset.row];$('#dlgLL').close();const ref=r.refs[0];if(r.refs.length>1){sel=new Set();}goTo(ref.si,ref.id);
+$('#llwrap').onclick=e=>{const tr=e.target.closest('[data-row]');if(!tr)return;const r=llRows[+tr.dataset.row];$('#dlgLL').close();const ref=r.refs[0];goTo(ref.si,ref.id);
  const same=r.refs.filter(x=>x.si===ref.si).map(x=>x.id);if(same.length>1){sel=new Set(same);renderItems();renderPane()}};
 const llHead=()=>{const m=D.meta;return [['LINE LIST'],['Project',m.title||''],['Client',[m.client,m.location].filter(Boolean).join(' – ')],['Project no.',m.projectNo||'','Drawing no.',m.drawingNo||''],['Revision',m.rev||'','Rev. date',m.revDate||''],['Printed',today()]]};
 function llExportXLSX(){
@@ -1153,7 +1320,6 @@ function llExportXLSX(){
  const info=llHead(),aoa=[...info,[],head,...data],ws=XLSX.utils.aoa_to_sheet(aoa);
  ws['!cols']=LL_COLS.map(c=>({wch:Math.max(8,Math.round(c[2]*.75))}));
  const hr=info.length+1;ws['!autofilter']={ref:`A${hr+1}:${XLSX.utils.encode_col(LL_COLS.length-1)}${hr+1+data.length}`};
- ws['!freeze']={xSplit:1,ySplit:hr+1};
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Line list');
  const sp=XLSX.utils.aoa_to_sheet([['Code','Description','Rating','Material'],...D.specs.map(s=>[s.code,s.desc,s.rating,s.material])]);sp['!cols']=[{wch:10},{wch:34},{wch:12},{wch:34}];XLSX.utils.book_append_sheet(wb,sp,'Pipe classes');
  XLSX.writeFile(wb,exportName()+'_line-list.xlsx');
@@ -1175,12 +1341,12 @@ function llExportPDF(){
   pdf.setFont('helvetica','bold');pdf.setFontSize(16);pdf.text('LINE LIST',M,M+5);
   pdf.setFont('helvetica','normal');pdf.setFontSize(9);
   pdf.text([`${m.title||''}${m.client?' – '+m.client:''}${m.location?' – '+m.location:''}`,`Project ${m.projectNo||'-'} · Drawing ${m.drawingNo||'-'} · Rev ${m.rev||'-'} (${m.revDate||''})`],M,M+12);
-  pdf.text([m.company||'',`Printed ${today()} · page ${pg+1} of ${pages}`],W-M,M+5,{align:'right'});
+  pdf.text([D.company?.name||'',`Printed ${today()} · page ${pg+1} of ${pages}`],W-M,M+5,{align:'right'});
   let y=top;pdf.setFillColor(232,235,239);pdf.rect(M,y,W-2*M,rh,'F');pdf.setFont('helvetica','bold');pdf.setFontSize(7.5);
   let x=M;LL_COLS.forEach((c,i)=>{pdf.text(fit(c[1],cw[i]-2),x+1,y+rh/2,{baseline:'middle'});x+=cw[i]});
   pdf.setFont('helvetica','normal');
   rows.slice(pg*per,(pg+1)*per).forEach((r,ri)=>{y+=rh;if(ri%2){pdf.setFillColor(247,248,250);pdf.rect(M,y,W-2*M,rh,'F')}
-   x=M;LL_COLS.forEach((c,i)=>{const v=r[c[0]]||(c[0]==='lineNo'?'—':'');pdf.setTextColor(r.conflict.includes(c[0])?200:17,r.conflict.includes(c[0])?100:17,17);pdf.text(fit(v,cw[i]-2),x+1,y+rh/2,{baseline:'middle'});x+=cw[i]});
+   x=M;LL_COLS.forEach((c,i)=>{const v=r[c[0]]||(c[0]==='lineNo'?'—':'');const cf=r.conflict.includes(c[0]);pdf.setTextColor(cf?200:17,cf?100:17,17);pdf.text(fit(v,cw[i]-2),x+1,y+rh/2,{baseline:'middle'});x+=cw[i]});
    pdf.setTextColor(17);pdf.line(M,y+rh,W-M,y+rh)});
   pdf.line(M,top,W-M,top);pdf.line(M,top+rh,W-M,top+rh);
   if(!rows.length)pdf.text('No lines.',M,top+rh*2);
@@ -1193,68 +1359,135 @@ function llExportPDF(){
 }
 $('#llPdf').onclick=llExportPDF;$('#llXlsx').onclick=llExportXLSX;$('#llCsv').onclick=llExportCSV;
 
-/* ---------------- Markdown storage ---------------- */
+/* ---------------- Markdown: shared helpers ---------------- */
+function mdParts(txt){
+ txt=txt.replace(/\r\n/g,'\n');const fm={};
+ const m=txt.match(/^---\n([\s\S]*?)\n---/);
+ if(m)m[1].split('\n').forEach(l=>{const i=l.indexOf(':');if(i<0)return;const k=l.slice(0,i).trim(),v=l.slice(i+1).trim();try{fm[k]=JSON.parse(v)}catch{fm[k]=v}});
+ const sec=name=>{const lines=txt.split('\n');const i=lines.findIndex(l=>l.trim().toLowerCase()==='## '+name.toLowerCase());if(i<0)return null;const out=[];for(let j=i+1;j<lines.length&&!/^## /.test(lines[j]);j++)out.push(lines[j]);return out.join('\n')};
+ const table=s=>(s||'').split('\n').filter(l=>/^\s*\|/.test(l)).slice(2).map(l=>l.trim().replace(/^\|/,'').replace(/\|$/,'').split(/(?<!\\)\|/).map(x=>x.trim().replace(/\\\|/g,'|')));
+ const bullets=s=>(s||'').split('\n').filter(l=>/^\s*[-*]\s/.test(l)).map(l=>l.replace(/^\s*[-*]\s/,'')).join('\n');
+ return {txt,fm,sec,table,bullets};
+}
+const mdc=s=>String(s??'').replace(/\|/g,'\\|').replace(/\n/g,' ');
+const specsMD=specs=>'| Code | Description | Rating | Material |\n|---|---|---|---|\n'+specs.map(p=>`| ${mdc(p.code)} | ${mdc(p.desc)} | ${mdc(p.rating)} | ${mdc(p.material)} |\n`).join('');
+const notesMD=notes=>(notes||'').split('\n').filter(x=>x.trim()).map(n=>`- ${n.trim()}\n`).join('');
 function slug(){const m=D.meta;return ([m.projectNo,m.title,m.client].filter(Boolean).join(' ')||'pid').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9.]+/g,'-').replace(/^-|-$/g,'').slice(0,80)}
+
+/* ---------------- project .md ---------------- */
 function toMD(){
- const m=D.meta,c=s=>String(s??'').replace(/\|/g,'\\|').replace(/\n/g,' ');
- let s='---\n';Object.keys(m).forEach(k=>s+=`${k}: ${JSON.stringify(m[k])}\n`);s+='---\n\n';
+ const m=D.meta;
+ let s='---\n';Object.keys(m).forEach(k=>s+=`${k}: ${JSON.stringify(m[k])}\n`);s+=`company: ${JSON.stringify(D.company||{})}\n---\n\n`;
  s+=`# ${m.title||'P&ID'}\n\n`;
- [['Client',m.client],['Location',m.location],['Project no.',m.projectNo],['Drawing no.',m.drawingNo],['Revision',m.rev+(m.revDate?' ('+m.revDate+')':'')],['Drawn by',m.drawnBy]].forEach(([k,v])=>{if(v)s+=`**${k}:** ${v}  \n`});
+ [['Client',m.client],['Location',m.location],['Project no.',m.projectNo],['Drawing no.',m.drawingNo],['Revision',m.rev+(m.revDate?' ('+m.revDate+')':'')],['Drawn by',m.drawnBy],['Company format',D.company?.file]].forEach(([k,v])=>{if(v)s+=`**${k}:** ${v}  \n`});
  s+='\n## Sheets\n\n';D.sheets.forEach((sh,i)=>s+=`${i+1}. ${sh.name}\n`);
- s+='\n## Revisions\n\n| Rev | Date | Description |\n|---|---|---|\n';D.revisions.forEach(r=>s+=`| ${c(r.rev)} | ${c(r.date)} | ${c(r.desc)} |\n`);
- s+='\n## Pipe classes\n\n| Code | Description | Rating | Material |\n|---|---|---|---|\n';D.specs.forEach(p=>s+=`| ${c(p.code)} | ${c(p.desc)} | ${c(p.rating)} | ${c(p.material)} |\n`);
- s+='\n## Piping interfaces\n\n| Nozzle | Size | Flange rating | Type |\n|---|---|---|---|\n';D.nozzles.forEach(n=>s+=`| ${c(n.id)} | ${c(n.size)} | ${c(n.flange)} | ${c(n.type)} |\n`);
- s+='\n## General notes\n\n';(D.notes||'').split('\n').filter(x=>x.trim()).forEach(n=>s+=`- ${n.trim()}\n`);
+ s+='\n## Revisions\n\n| Rev | Date | Description |\n|---|---|---|\n';D.revisions.forEach(r=>s+=`| ${mdc(r.rev)} | ${mdc(r.date)} | ${mdc(r.desc)} |\n`);
+ s+='\n## Pipe classes\n\n'+specsMD(D.specs);
+ s+='\n## Piping interfaces\n\n| Nozzle | Size | Flange rating | Type |\n|---|---|---|---|\n';D.nozzles.forEach(n=>s+=`| ${mdc(n.id)} | ${mdc(n.size)} | ${mdc(n.flange)} | ${mdc(n.type)} |\n`);
+ s+='\n## General notes\n\n'+notesMD(D.notes);
  const ll=lineList(false);
- if(ll.length){s+='\n## Line list\n\n<!-- Generated from the drawing on save; edit lines in the editor. -->\n| Line no. | Designation | Size | Medium | Class | From | To | Design P | Design T | Sheet(s) |\n|---|---|---|---|---|---|---|---|---|---|\n';ll.forEach(r=>s+=`| ${c(r.lineNo)} | ${c(r.desig)} | ${c(r.size)} | ${c(r.medium)} | ${c(r.spec)} | ${c(r.from)} | ${c(r.to)} | ${c(r.dp)} | ${c(r.dt)} | ${c(r.sheetsTxt)} |\n`)}
+ if(ll.length){s+='\n## Line list\n\n<!-- Generated from the drawing on save; edit lines in the editor. -->\n| Line no. | Designation | Size | Medium | Class | From | To | Design P | Design T | Sheet(s) |\n|---|---|---|---|---|---|---|---|---|---|\n';ll.forEach(r=>s+=`| ${mdc(r.lineNo)} | ${mdc(r.desig)} | ${mdc(r.size)} | ${mdc(r.medium)} | ${mdc(r.spec)} | ${mdc(r.from)} | ${mdc(r.to)} | ${mdc(r.dp)} | ${mdc(r.dt)} | ${mdc(r.sheetsTxt)} |\n`)}
  const tags=D.sheets.flatMap(sh=>sh.items).filter(i=>(i.k==='sym'&&i.tag&&i.s!=='nozzle')||(i.k==='inst'&&i.num)).map(i=>i.k==='inst'?`${i.code}-${i.num}`:i.tag).sort();
  if(tags.length)s+=`\n**Tags:** ${tags.join(', ')}\n`;
- s+='\n## Drawing data\n\n<!-- Managed by the P&ID editor. Units: mm. Edit the tables above freely (except the line list); edit the JSON only if you know what you are doing. -->\n```json\n{"v":2,"sheets":[\n'
-  +D.sheets.map(sh=>`{"id":${JSON.stringify(sh.id)},"name":${JSON.stringify(sh.name)},"items":[\n`+sh.items.map(i=>JSON.stringify(i)).join(',\n')+'\n]}').join(',\n')+'\n]}\n```\n';
+ s+='\n## Drawing data\n\n<!-- Managed by the P&ID editor. Units: mm. Edit the tables above freely (except the line list); edit the JSON only if you know what you are doing. -->\n```json\n{"v":3,"sheets":[\n'
+  +D.sheets.map(sh=>`{"id":${JSON.stringify(sh.id)},"name":${JSON.stringify(sh.name)},"pos":${JSON.stringify(sh.pos||{})},"items":[\n`+sh.items.map(i=>JSON.stringify(i)).join(',\n')+'\n]}').join(',\n')+'\n]}\n```\n';
  return s;
 }
 function fromMD(txt){
- const d=newDoc();txt=txt.replace(/\r\n/g,'\n');
- const fm=txt.match(/^---\n([\s\S]*?)\n---/);
- if(fm)fm[1].split('\n').forEach(l=>{const i=l.indexOf(':');if(i<0)return;const k=l.slice(0,i).trim(),v=l.slice(i+1).trim();try{d.meta[k]=JSON.parse(v)}catch{d.meta[k]=v}});
- const sec=name=>{const lines=txt.split('\n');const i=lines.findIndex(l=>l.trim().toLowerCase()==='## '+name.toLowerCase());if(i<0)return null;const out=[];for(let j=i+1;j<lines.length&&!/^## /.test(lines[j]);j++)out.push(lines[j]);return out.join('\n')};
- const table=s=>(s||'').split('\n').filter(l=>/^\s*\|/.test(l)).slice(2).map(l=>l.trim().replace(/^\|/,'').replace(/\|$/,'').split(/(?<!\\)\|/).map(x=>x.trim().replace(/\\\|/g,'|')));
- const rv=sec('Revisions');if(rv!==null)d.revisions=table(rv).map(([rev='',date='',desc=''])=>({rev,date,desc}));
- const pc=sec('Pipe classes');if(pc!==null)d.specs=table(pc).map(([code='',desc='',rating='',material=''])=>({code,desc,rating,material}));
- const nz=sec('Piping interfaces');if(nz!==null)d.nozzles=table(nz).map(([id='',size='',flange='',type=''])=>({id,size,flange,type}));
- const nt=sec('General notes');if(nt!==null)d.notes=nt.split('\n').filter(l=>/^\s*[-*]\s/.test(l)).map(l=>l.replace(/^\s*[-*]\s/,'')).join('\n');
- const js=txt.match(/```json\n([\s\S]*?)\n```/);
+ const d=newDoc(),P_=mdParts(txt);
+ Object.entries(P_.fm).forEach(([k,v])=>{if(k==='company')d.company=typeof v==='object'?v:{name:v};else d.meta[k]=v});
+ const rv=P_.sec('Revisions');if(rv!==null)d.revisions=P_.table(rv).map(([rev='',date='',desc=''])=>({rev,date,desc}));
+ const pc=P_.sec('Pipe classes');if(pc!==null)d.specs=P_.table(pc).map(([code='',desc='',rating='',material=''])=>({code,desc,rating,material}));
+ const nz=P_.sec('Piping interfaces');if(nz!==null)d.nozzles=P_.table(nz).map(([id='',size='',flange='',type=''])=>({id,size,flange,type}));
+ const nt=P_.sec('General notes');if(nt!==null)d.notes=P_.bullets(nt);
+ const js=P_.txt.match(/```json\n([\s\S]*?)\n```/);
  if(js){const o=JSON.parse(js[1]);if(o.sheets)d.sheets=o.sheets;else d.sheets=[{id:uid(),name:'Sheet 1',items:o.items||[]}]}
  return normalize(d);
 }
 
-/* ---------------- GitHub ---------------- */
+/* ---------------- company format .md ---------------- */
+function formatToMD(){
+ const c=D.company||{},m=D.meta;
+ const fm={name:c.name||'',address:c.address||'',contact:c.contact||'',format:m.format,symScale:m.symScale,textScale:m.textScale,labelGap:m.labelGap,lineFmt:m.lineFmt,showLegend:m.showLegend,showNozzles:m.showNozzles};
+ let s='---\n';Object.entries(fm).forEach(([k,v])=>s+=`${k}: ${JSON.stringify(v)}\n`);s+='---\n\n';
+ s+=`# Company format – ${c.name||'(name)'}\n\nUsed by the P&ID editor: company details for the title block, and defaults for new projects.\nEdit the values above (between the --- lines) and the lists below.\n`;
+ s+='\n## General notes\n\n'+notesMD(D.notes);
+ s+='\n## Pipe classes\n\n'+specsMD(D.specs);
+ return s;
+}
+function formatFromMD(txt){
+ const P_=mdParts(txt),fm=P_.fm;
+ const nt=P_.sec('General notes'),pc=P_.sec('Pipe classes');
+ return {company:{name:fm.name??fm.company??'',address:fm.address||'',contact:fm.contact||''},
+  defaults:Object.fromEntries(['format','symScale','textScale','labelGap','lineFmt','showLegend','showNozzles'].filter(k=>fm[k]!==undefined&&fm[k]!=='').map(k=>[k,fm[k]])),
+  notes:nt!==null?P_.bullets(nt):null,specs:pc!==null?P_.table(pc).map(([code='',desc='',rating='',material=''])=>({code,desc,rating,material})).filter(s=>s.code||s.desc):null};
+}
+const isEmptyProject=()=>D.sheets.every(s=>!s.items.length);
+function applyFormat(f,fileName){
+ pushHist();
+ D.company={...f.company,file:fileName||''};
+ const empty=isEmptyProject();
+ if(empty)Object.assign(D.meta,f.defaults);
+ if(f.notes!==null&&f.notes!==D.notes&&(!D.notes||confirm('Replace the general notes with the notes from this format?')))D.notes=f.notes;
+ if(f.specs&&f.specs.length&&(!D.specs.length||confirm('Replace the pipe classes with the ones from this format?')))D.specs=f.specs;
+ renderAll();if(empty)fit();toast('Company format applied: '+(f.company.name||fileName||''));
+}
+
+/* ---------------- GitHub ----------------
+   <base>/Projects and <base>/Formats; folder names are matched case-insensitively */
 const GH={
  cfg(){try{return JSON.parse(lsGet('pid.gh')||'{}')}catch{return {}}},
  ok(){const c=this.cfg();return !!(c.owner&&c.repo&&c.token)},
- url(path){const c=this.cfg();return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}`},
+ baseName(){return (this.cfg().folder||'PID').replace(/^\/+|\/+$/g,'')},
+ url(path){const c=this.cfg();return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${path?path.split('/').map(encodeURIComponent).join('/'):''}`},
  async req(path,opt={}){const c=this.cfg();const q=opt.method?'':`?ref=${encodeURIComponent(c.branch||'main')}`;
   const r=await fetch(this.url(path)+q,{...opt,headers:{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})},cache:'no-store'});
   if(!r.ok){const t=await r.text();const err=new Error(`GitHub ${r.status}: ${(()=>{try{return JSON.parse(t).message}catch{return t.slice(0,140)}})()}`);err.status=r.status;throw err}
   return r.json()},
- folder(){return (this.cfg().folder||'pid').replace(/^\/|\/$/g,'')},
- async list(){try{const r=await this.req(this.folder());return r.filter(f=>f.type==='file'&&/\.md$/i.test(f.name))}catch(e){if(e.status===404)return [];throw e}},
+ async dir(path){try{const r=await this.req(path);return Array.isArray(r)?r:null}catch(e){if(e.status===404)return null;throw e}},
+ st:null,
+ async check(){ // finds base / Projects / Formats; returns list of missing parts
+  const want=this.baseName(),parts=want.split('/');let cur='',ok=true;
+  for(const p of parts){const ls=await this.dir(cur);const hit=ls&&ls.find(f=>f.type==='dir'&&f.name.toLowerCase()===p.toLowerCase());cur=(cur?cur+'/':'')+(hit?hit.name:p);if(!hit){ok=false;break}}
+  if(!ok){cur=want}
+  const sub=ok?(await this.dir(cur))||[]:[],fd=n=>{const x=sub.find(f=>f.type==='dir'&&f.name.toLowerCase()===n.toLowerCase());return x?x.name:null};
+  const pn=fd('Projects'),fn=fd('Formats');
+  this.st={base:cur,proj:`${cur}/${pn||'Projects'}`,fmt:`${cur}/${fn||'Formats'}`,missing:[!pn&&'Projects',!fn&&'Formats'].filter(Boolean)};
+  return this.st;
+ },
+ async ensureSt(){if(!this.st)await this.check();return this.st},
+ async listMd(path){return ((await this.dir(path))||[]).filter(f=>f.type==='file'&&/\.md$/i.test(f.name))},
  async load(path){const r=await this.req(path);return {text:b64d(r.content),sha:r.sha}},
  async sha(path){try{return (await this.req(path)).sha}catch(e){if(e.status===404)return null;throw e}},
  async save(path,text,sha,msg){const c=this.cfg();const body={message:msg,content:b64e(text),branch:c.branch||'main'};if(sha)body.sha=sha;
   const r=await this.req(path,{method:'PUT',body:JSON.stringify(body)});return r.content.sha},
+ async createStructure({fmtTpl=false,prjTpl=false}={}){
+  const st=await this.ensureSt();
+  if(st.missing.includes('Projects'))await this.save(`${st.proj}/README.md`,'# P&ID projects\n\nProject files saved by the P&ID editor. Files whose name starts with "Template" are offered as templates for new projects.\n',null,'P&ID: create Projects folder');
+  if(st.missing.includes('Formats'))await this.save(`${st.fmt}/README.md`,'# P&ID company formats\n\nCompany details for the title block plus default notes and pipe classes. Choose one in the editor under Project → Company.\n',null,'P&ID: create Formats folder');
+  if(fmtTpl){const p=`${st.fmt}/Template.md`;if(!await this.sha(p))await this.save(p,formatTemplateMD(),null,'P&ID: format template')}
+  if(prjTpl){const p=`${st.proj}/Template.md`;if(!await this.sha(p))await this.save(p,projectTemplateMD(),null,'P&ID: project template')}
+  this.st=null;return this.check();
+ },
 };
 function b64e(s){const b=new TextEncoder().encode(s);let bin='';for(let i=0;i<b.length;i+=0x8000)bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(bin)}
 function b64d(s){return new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')),c=>c.charCodeAt(0)))}
+function formatTemplateMD(){const keep=D;D=newDoc(D.company&&D.company.name?D.company:{name:'Your company',address:'Street 1\n0000 AA City',contact:'phone · e-mail · web',file:''});D.specs=keep.specs.length?JSON.parse(JSON.stringify(keep.specs)):[{code:'A1',desc:'Example class',rating:'PN16',material:'Carbon steel'}];D.notes=keep.notes||'';try{return formatToMD()}finally{D=keep}}
+function projectTemplateMD(){const keep=D;D=newDoc(keep.company);D.meta.title='Template';D.specs=JSON.parse(JSON.stringify(keep.specs));try{return toMD()}finally{D=keep}}
 
-async function save(asNew=false){
+async function save(asNew=false,asTemplate=false){
  if(draft)finishDraft();
  if(!GH.ok()){downloadMD();toast('No GitHub settings – downloaded the .md instead');return}
  try{
-  if(!file.path||asNew){
-   const name=prompt('File name in '+GH.folder()+'/',(file.path?file.path.split('/').pop():slug()+'.md'));if(!name)return;
-   const path=GH.folder()+'/'+(name.endsWith('.md')?name:name+'.md');
+  const st=await GH.ensureSt();
+  if(st.missing.length){toast('Creating folders '+st.missing.join(' and ')+'…');await GH.createStructure()}
+  if(!file.path||asNew||asTemplate){
+   const def=asTemplate?'Template '+(D.meta.title&&D.meta.title!=='P&ID'?D.meta.title:'')+'.md':(file.path&&!asNew?file.path.split('/').pop():slug()+'.md');
+   let name=prompt(`File name in ${GH.st.proj}/`,def.replace(/\s+\.md$/,'.md'));if(!name)return;
+   if(asTemplate&&!/^template/i.test(name))name='Template '+name;
+   const path=`${GH.st.proj}/${name.endsWith('.md')?name:name+'.md'}`;
    const ex=await GH.sha(path);if(ex&&!confirm(path+' already exists. Overwrite?'))return;
+   if(asTemplate){await GH.save(path,toMD(),ex,`P&ID template ${name}`);toast('Template saved');return}
    file.path=path;file.sha=ex;
   }
   toast('Saving…');
@@ -1268,38 +1501,94 @@ async function save(asNew=false){
 }
 function download(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 function downloadMD(){download((file.path?file.path.split('/').pop():slug()+'.md'),toMD(),'text/markdown')}
-function loadDoc(d,f={path:null,sha:null}){D=normalize(d);cs=0;file={...f,dirty:false};undoS=[];redoS=[];sel.clear();draft=null;afterLoad(true);lsSet('pid.draft',JSON.stringify({D,file,cs}))}
+function loadDoc(d,f={path:null,sha:null}){D=normalize(d);cs=0;file={...f,dirty:false};undoS=[];redoS=[];sel.clear();selBlock=null;draft=null;afterLoad(true);lsSet('pid.draft',JSON.stringify({D,file,cs}))}
 function afterLoad(refit){sel=new Set([...sel].filter(id=>byId(id)));renderAll();if(refit)fit()}
 
+/* ---------------- open dialog ---------------- */
+const isTpl=n=>/^_?template/i.test(n);
 async function openFileDialog(){
- const dlg=$('#dlgFile');dlg.showModal();const st=$('#ghState'),fl=$('#filelist');
- if(!GH.ok()){st.innerHTML='GitHub is not set up yet. Use <b>⚙</b> to connect a repository, or import/download .md files below.';fl.style.display='none';return}
- const c=GH.cfg();st.textContent=`${c.owner}/${c.repo} · ${c.branch||'main'} · /${GH.folder()}`;fl.style.display='';fl.innerHTML='<div class="hint">Loading…</div>';
- try{const files=await GH.list();fl.innerHTML=files.length?files.map(f=>`<div data-p="${esc(f.path)}"><span>${esc(f.name)}</span><span class="hint">${(f.size/1024).toFixed(1)} kB</span></div>`).join(''):'<div class="hint">No .md files in this folder yet. Save a project to create one.</div>'}
- catch(e){fl.innerHTML=`<div class="hint">${esc(e.message)}</div>`}
+ $('#dlgFile').showModal();const st=$('#ghState'),setup=$('#ghSetup'),tw=$('#tplWrap'),pw=$('#prjWrap');setup.innerHTML=tw.innerHTML=pw.innerHTML='';
+ $('#btnSaveTpl').disabled=!GH.ok();
+ if(!GH.ok()){st.innerHTML='GitHub is not set up yet. Use <b>⚙</b> to connect your private data repository, or import / download .md files below.';return}
+ const c=GH.cfg();st.textContent=`${c.owner}/${c.repo} · ${c.branch||'main'} · checking folders…`;
+ try{
+  GH.st=null;const s=await GH.check();st.textContent=`${c.owner}/${c.repo} · ${c.branch||'main'} · ${s.base}/`;
+  if(s.missing.length){
+   setup.innerHTML=`<div class="box warnbox"><span class="t">⚠ Not found: ${s.missing.map(m=>`<b>${esc(s.base)}/${m}</b>`).join(' and ')}</span><p class="hint" style="margin:6px 0">These folders hold your projects and company formats. Create them now?</p>
+    <label class="chk"><input type="checkbox" id="mkFmt" checked> Also save a company format template (Formats/Template.md)${D.company?.name?' – from the current company details':''}</label>
+    <label class="chk"><input type="checkbox" id="mkPrj" checked> Also save a blank project template (Projects/Template.md)</label>
+    <div class="row"><button class="btn pri sm" id="btnMkDirs">Create folders</button></div></div>`;
+   $('#btnMkDirs').onclick=async()=>{const b=$('#btnMkDirs');b.disabled=true;b.textContent='Creating…';try{await GH.createStructure({fmtTpl:$('#mkFmt').checked,prjTpl:$('#mkPrj').checked});toast('Folders created');openFileDialog()}catch(e){alert(e.message);b.disabled=false;b.textContent='Create folders'}};
+   return;
+  }
+  const files=await GH.listMd(s.proj),tpls=files.filter(f=>isTpl(f.name)),prjs=files.filter(f=>!isTpl(f.name)&&!/^readme\.md$/i.test(f.name));
+  if(tpls.length)tw.innerHTML=`<div class="lsth">Templates – start a new project</div><div class="filelist">${tpls.map(f=>`<div data-tpl="${esc(f.path)}"><span>${esc(f.name.replace(/\.md$/i,''))}</span><span class="hint">new from template</span></div>`).join('')}</div>`;
+  pw.innerHTML=`<div class="lsth">Projects</div><div class="filelist">${prjs.length?prjs.map(f=>`<div data-p="${esc(f.path)}"><span>${esc(f.name)}</span><span class="hint">${(f.size/1024).toFixed(1)} kB</span></div>`).join(''):'<div class="hint" style="cursor:default">No projects yet. Save one to create it here.</div>'}</div>`;
+ }catch(e){st.textContent=e.message}
 }
-$('#filelist').onclick=async e=>{const r=e.target.closest('[data-p]');if(!r)return;if(file.dirty&&!confirm('Discard unsaved changes?'))return;
- try{toast('Loading…');const {text,sha}=await GH.load(r.dataset.p);loadDoc(fromMD(text),{path:r.dataset.p,sha});$('#dlgFile').close();toast('Opened '+r.dataset.p.split('/').pop())}catch(err){alert(err.message)}};
+$('#dlgFile').addEventListener('click',async e=>{
+ const r=e.target.closest('[data-p],[data-tpl]');if(!r)return;if(file.dirty&&!confirm('Discard unsaved changes?'))return;
+ try{toast('Loading…');
+  if(r.dataset.p){const {text,sha}=await GH.load(r.dataset.p);loadDoc(fromMD(text),{path:r.dataset.p,sha});toast('Opened '+r.dataset.p.split('/').pop())}
+  else{const {text}=await GH.load(r.dataset.tpl);const d=fromMD(text);d.meta.title='P&ID';d.meta.date=today();d.meta.revDate=today();loadDoc(d);tab='project';renderPane();toast('New project from template – save it to give it a name')}
+  $('#dlgFile').close()}catch(err){alert(err.message)}
+});
 $('#btnFile').onclick=openFileDialog;
 $('#btnSave').onclick=()=>save();
 $('#btnSaveAs').onclick=()=>{$('#dlgFile').close();save(true)};
-$('#btnNew').onclick=()=>{if(file.dirty&&!confirm('Discard unsaved changes?'))return;loadDoc(newDoc());$('#dlgFile').close();tab='project';renderPane()};
+$('#btnSaveTpl').onclick=()=>{$('#dlgFile').close();save(false,true)};
+$('#btnNew').onclick=()=>{if(file.dirty&&!confirm('Discard unsaved changes?'))return;const keep=D.company;loadDoc(newDoc(keep));$('#dlgFile').close();tab='project';renderPane()};
 $('#btnDownload').onclick=downloadMD;
 $('#btnImport').onclick=()=>$('#fileIn').click();
 $('#fileIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{loadDoc(fromMD(await f.text()));$('#dlgFile').close();toast('Imported '+f.name)}catch(err){alert('Could not read this file.\n'+err.message)}e.target.value=''};
-$('#btnExample').onclick=()=>{if(file.dirty&&!confirm('Discard unsaved changes?'))return;loadDoc(exampleDoc());$('#dlgFile').close()};
+$('#btnExample').onclick=()=>{if(file.dirty&&!confirm('Discard unsaved changes?'))return;loadDoc(exampleDoc(D.company));$('#dlgFile').close()};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-$('#btnGh').onclick=()=>{const c=GH.cfg();$('#ghOwner').value=c.owner||'';$('#ghRepo').value=c.repo||'';$('#ghBranch').value=c.branch||'main';$('#ghFolder').value=c.folder||'pid';$('#ghToken').value=c.token||'';$('#ghTest').textContent='';$('#dlgGh').showModal()};
-const readGh=()=>({owner:$('#ghOwner').value.trim(),repo:$('#ghRepo').value.trim(),branch:$('#ghBranch').value.trim()||'main',folder:$('#ghFolder').value.trim()||'pid',token:$('#ghToken').value.trim()});
-$('#ghSaveBtn').onclick=()=>{lsSet('pid.gh',JSON.stringify(readGh()));$('#dlgGh').close();toast('GitHub settings saved')};
+
+/* ---------------- format dialog ---------------- */
+async function openFormatDialog(){
+ $('#dlgFmt').showModal();const st=$('#fmtState'),fl=$('#fmtlist');fl.innerHTML='';fl.style.display='none';$('#fmtSaveGh').disabled=!GH.ok();
+ if(!GH.ok()){st.innerHTML='GitHub is not set up – you can import or download a format .md file.';return}
+ st.textContent='Loading formats…';
+ try{const s=await GH.ensureSt();
+  if(s.missing.includes('Formats')){st.innerHTML=`No <b>${esc(s.fmt)}</b> folder yet. Use <b>Open</b> to create the folders, or save the current details below (the folder is created automatically).`;return}
+  const files=(await GH.listMd(s.fmt)).filter(f=>!/^readme\.md$/i.test(f.name));
+  st.textContent=`${s.fmt}/ · click a format to use it`;fl.style.display='';
+  fl.innerHTML=files.length?files.map(f=>`<div data-fmt="${esc(f.path)}"><span>${esc(f.name.replace(/\.md$/i,''))}</span><span class="hint">${D.company?.file===f.name?'in use':'use'}</span></div>`).join(''):'<div class="hint" style="cursor:default">No formats yet.</div>';
+ }catch(e){st.textContent=e.message}
+}
+$('#fmtlist').onclick=async e=>{const r=e.target.closest('[data-fmt]');if(!r)return;try{const {text}=await GH.load(r.dataset.fmt);$('#dlgFmt').close();applyFormat(formatFromMD(text),r.dataset.fmt.split('/').pop())}catch(err){alert(err.message)}};
+$('#fmtImport').onclick=()=>$('#fmtIn').click();
+$('#fmtIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{$('#dlgFmt').close();applyFormat(formatFromMD(await f.text()),f.name)}catch(err){alert('Could not read this file.\n'+err.message)}e.target.value=''};
+const fmtFileName=()=>((D.company?.name||'Company').replace(/[^\w .-]+/g,'').trim().replace(/\s+/g,'-')||'Company')+'.md';
+$('#fmtDownload').onclick=()=>download(D.company?.file||fmtFileName(),formatToMD(),'text/markdown');
+$('#fmtSaveGh').onclick=()=>{$('#dlgFmt').close();saveFormat()};
+async function saveFormat(){
+ if(!D.company?.name){toast('Fill in the company name first (Project tab)');tab='project';renderPane();return}
+ if(!GH.ok()){download(D.company.file||fmtFileName(),formatToMD(),'text/markdown');toast('No GitHub settings – downloaded the format instead');return}
+ try{const st=await GH.ensureSt();if(st.missing.length)await GH.createStructure();
+  let name=prompt(`Format file name in ${GH.st.fmt}/`,D.company.file||fmtFileName());if(!name)return;if(!/\.md$/i.test(name))name+='.md';
+  const path=`${GH.st.fmt}/${name}`,ex=await GH.sha(path);if(ex&&!confirm(name+' already exists. Overwrite?'))return;
+  await GH.save(path,formatToMD(),ex,`P&ID format ${name}`);pushHist();D.company.file=name;renderPane();toast('Format saved: '+name);
+ }catch(e){alert('Save failed.\n'+e.message)}
+}
+
+/* ---------------- GitHub settings (token field only exists while the dialog is open,
+   so password managers never treat the page as a login form) ---------------- */
+$('#btnGh').onclick=()=>{const c=GH.cfg();$('#ghOwner').value=c.owner||'';$('#ghRepo').value=c.repo||'';$('#ghBranch').value=c.branch||'main';$('#ghFolder').value=c.folder||'PID';
+ $('#ghTokenSlot').innerHTML='<input id="ghToken" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" placeholder="github_pat_…" style="width:100%;border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--panel)">';
+ $('#ghToken').value=c.token||'';$('#ghTest').textContent='';$('#dlgGh').showModal()};
+$('#dlgGh').addEventListener('close',()=>{$('#ghTokenSlot').innerHTML=''});
+const readGh=()=>({owner:$('#ghOwner').value.trim(),repo:$('#ghRepo').value.trim(),branch:$('#ghBranch').value.trim()||'main',folder:$('#ghFolder').value.trim()||'PID',token:($('#ghToken')?.value||'').trim()});
+$('#ghSaveBtn').onclick=()=>{lsSet('pid.gh',JSON.stringify(readGh()));GH.st=null;$('#dlgGh').close();toast('GitHub settings saved')};
 $('#ghTestBtn').onclick=async()=>{const prev=lsGet('pid.gh');lsSet('pid.gh',JSON.stringify(readGh()));const t=$('#ghTest');t.textContent='Testing…';
- try{const f=await GH.list();t.textContent=`Connected. ${f.length} project file(s) in /${GH.folder()}.`}catch(e){t.textContent=e.message}finally{if(prev!==null)lsSet('pid.gh',prev)}};
+ try{GH.st=null;const s=await GH.check();t.innerHTML=`Connected. ${esc(s.base)}/Projects ${s.missing.includes('Projects')?'✗':'✓'} · ${esc(s.base)}/Formats ${s.missing.includes('Formats')?'✗':'✓'}${s.missing.length?'<br>Missing folders can be created from <b>Open</b>.':''}`}
+ catch(e){t.textContent=e.message}finally{GH.st=null;if(prev!==null)lsSet('pid.gh',prev);else try{localStorage.removeItem('pid.gh')}catch{}}};
 
 /* ---------------- drawing export ---------------- */
 const exportName=()=>((D.meta.drawingNo||slug())+(D.meta.rev?'_rev'+D.meta.rev:'')).replace(/[^\w.-]+/g,'_');
 const exIdx=()=>$('#exScope').value==='cur'?[cs]:D.sheets.map((_,i)=>i);
 $('#btnExport').onclick=()=>{if(draft)finishDraft();const un=D.sheets.reduce((a,s,i)=>a+s.items.filter(o=>o.k==='opc'&&!opcPartner(o,i)).length,0);
- $('#exWarn').innerHTML=un?`<div class="box warnbox">⚠ ${un} off-page connector(s) without a partner – they print as "SHT ?".</div>`:'';$('#exScope').value=D.sheets.length>1?'all':'cur';$('#dlgExport').showModal()};
+ $('#exWarn').innerHTML=un?`<div class="box warnbox"><span class="t">⚠ ${un} off-page connector(s) without a partner – they print as "SHT ?".</span></div>`:'';$('#exScope').value=D.sheets.length>1?'all':'cur';$('#dlgExport').showModal()};
 $('#exPdf').onclick=()=>{exportPDF(exIdx());$('#dlgExport').close()};
 $('#exDxf').onclick=()=>{exportDXF(exIdx());$('#dlgExport').close()};
 function exportPDF(idxs){
@@ -1328,14 +1617,14 @@ function exportPDF(idxs){
  pdf.save(exportName()+(idxs.length===1&&D.sheets.length>1?'_sht'+(idxs[0]+1):'')+'.pdf');
 }
 function exportDXF(idxs){
- const [W,H]=sheet(),GAP=100,o=[],g=(c,v)=>o.push(String(c),String(v));
+ const [W,H]=sheet(),GAPX=100,o=[],g=(c,v)=>o.push(String(c),String(v));
  const n=v=>(+v).toFixed(3);
  const tx=s=>String(s).replace(/[\r\n]+/g,' ').replace(/[^\x20-\x7e]/g,ch=>'\\U+'+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0'));
  const LAY={FRAME:7,PIPE:7,SIGNAL:3,ELEC:5,BOUNDARY:8,SYMBOL:7,INST:4,TEXT:7,EQUIP:7};
  const lts=[];const ltName=d=>{if(!d)return null;const k=d.map(v=>+v.toFixed(3)).join(',');let i=lts.findIndex(x=>x.k===k);if(i<0){lts.push({k,d});i=lts.length-1}return 'PID'+(i+1)};
- const sets=idxs.map((si,k)=>({ox:k*(W+GAP),prims:withSheet(si,allPrims)}));
+ const sets=idxs.map((si,k)=>({ox:k*(W+GAPX),prims:withSheet(si,allPrims)}));
  sets.forEach(s=>s.prims.forEach(p=>p.lt=ltName(p.dash)));
- const XM=sets.length*(W+GAP)-GAP;
+ const XM=sets.length*(W+GAPX)-GAPX;
  g(0,'SECTION');g(2,'HEADER');g(9,'$ACADVER');g(1,'AC1009');g(9,'$INSBASE');g(10,0);g(20,0);g(30,0);g(9,'$EXTMIN');g(10,0);g(20,0);g(30,0);g(9,'$EXTMAX');g(10,XM);g(20,H);g(30,0);g(9,'$LIMMIN');g(10,0);g(20,0);g(9,'$LIMMAX');g(10,XM);g(20,H);g(9,'$LTSCALE');g(40,1);g(9,'$MEASUREMENT');g(70,1);g(0,'ENDSEC');
  g(0,'SECTION');g(2,'TABLES');
  g(0,'TABLE');g(2,'LTYPE');g(70,lts.length+1);
@@ -1366,55 +1655,44 @@ function exportDXF(idxs){
  download(exportName()+(idxs.length===1&&D.sheets.length>1?'_sht'+(idxs[0]+1):'')+'.dxf',o.join('\r\n')+'\r\n','application/dxf');
 }
 
-/* ---------------- example ---------------- */
-function exampleDoc(){
- const d=newDoc();
- Object.assign(d.meta,{title:'P&ID Prefab Pumproom',client:'Lanxess Chemical',location:'Rotterdam',projectNo:'423.2221',drawingNo:'423.2221-PID',drawnBy:'L.H.',date:'12-01-2026',rev:'C',revDate:'17-07-2026'});
- d.revisions=[{rev:'0',date:'12-01-2026',desc:'Design.'},{rev:'A',date:'19-02-2026',desc:'Various textual changes.'},{rev:'B',date:'23-03-2026',desc:'Various changes.'},{rev:'C',date:'17-07-2026',desc:'Watertank removed.'}];
- const FL='FLANGED (EN-1092-1/DIN2633) PN16',TH='THREADED BSP (INSIDE)';
- d.nozzles=[['A','DN300',FL,'SUCTION 1'],['C','DN300',FL,'DISCHARGE 1'],['E','DN250',FL,'TEST RETURN'],['F','DN300',FL,'PRESSURE RELIEF 1'],['K','DN50',TH,'TANK FILL'],['M','DN32',TH,'TANK BREATHER']].map(([id,size,flange,type])=>({id,size,flange,type}));
- d.specs=[{code:'A1',desc:'Fire water (example)',rating:'PN16',material:'Carbon steel, seamless'},{code:'B1',desc:'Diesel fuel (example)',rating:'PN10',material:'Carbon steel'},{code:'C1',desc:'Exhaust (example)',rating:'—',material:'Carbon steel'}];
- d.notes='DELIVERED BY WB FIREPACKS.\nPIPE CLASS INSIDE PUMPROOM = PN16.\nDRAINS IN PUMPROOM COMBINED AND FITTED OUT TO RAINWATER DRAIN.';
+/* ---------------- neutral example (no client or company data) ---------------- */
+function exampleDoc(company){
+ const d=newDoc(company);
+ Object.assign(d.meta,{title:'Example P&ID',client:'Example client',location:'',projectNo:'0000',drawingNo:'0000-PID',drawnBy:''});
+ d.nozzles=[['A','DN300','FLANGED PN16','SUCTION'],['C','DN300','FLANGED PN16','DISCHARGE'],['E','DN250','FLANGED PN16','TEST RETURN'],['F','DN300','FLANGED PN16','PRESSURE RELIEF']].map(([id,size,flange,type])=>({id,size,flange,type}));
+ d.specs=[{code:'A1',desc:'Example – water',rating:'PN16',material:'Example material'},{code:'B1',desc:'Example – fuel',rating:'PN10',material:'Example material'}];
+ d.notes='EXAMPLE DRAWING – NOT FOR CONSTRUCTION.';
  const mk=()=>{const I=[];return {I,add:o=>I.push({id:uid(),...o}),ln:(style,pts,o={})=>I.push({id:uid(),k:'line',style,pts,...o}),sy:(s,x,y,o={})=>I.push({id:uid(),k:'sym',s,x,y,rot:0,...o})}};
- const FW={medium:'FW',spec:'A1',dp:'16',dt:'40',tp:'24'};
- // sheet 1 – fire pump set
+ const FW={medium:'FW',spec:'A1',dp:'16'};
  let {I,add,ln,sy}=mk();
- add({k:'rect',style:'dashed',x:150,y:40,w:760,h:760,label:'PUMPROOM',labelPos:'top'});
- sy('nozzle',130,700,{tag:'A'});ln('pipe',[[134,700],[227,700]],{lineNo:'001',size:'DN300',...FW,from:'Nozzle A',to:'Pump P-1109A'});
+ add({k:'rect',style:'dashed',x:150,y:40,w:760,h:760,label:'PUMP ROOM',labelPos:'top'});
+ sy('nozzle',130,700,{tag:'A'});ln('pipe',[[134,700],[227,700]],{lineNo:'001',size:'DN300',...FW,from:'Nozzle A',to:'Pump P-101'});
  sy('gate_no',170,700);sy('reducer_e',205,700);
  ln('small',[[187.5,700],[187.5,687.5]]);add({k:'inst',code:'PI',num:'',x:187.5,y:684.9});
- sy('pump',230,700,{tag:'P-1109A',tagPos:'left'});
- add({k:'text',text:'785 m³/h – 12 bar',x:160,y:722,h:2,align:'left',box:true});
- add({k:'rect',style:'equip',x:205,y:730,w:55,h:22,label:'DIESEL ENGINE 1'});
+ sy('pump',230,700,{tag:'P-101',tagPos:'left',attached:true});
+ add({k:'rect',style:'equip',x:205,y:730,w:55,h:22,label:'DRIVER'});
  ln('small',[[230,703.8],[230,730]]);
- ln('pipe',[[233.6,697],[262.5,697],[262.5,620],[915,620]],{lineNo:'002',size:'DN300',...FW,from:'Pump P-1109A',to:'Nozzle C'});
+ ln('pipe',[[233.6,697],[262.5,697],[262.5,620],[915,620]],{lineNo:'002',size:'DN300',...FW,from:'Pump P-101',to:'Nozzle C'});
  sy('check_disc',262.5,670,{rot:270});sy('gate_no',262.5,645,{rot:90});
- ln('small',[[300,620],[300,608.3]]);add({k:'inst',code:'PS',num:'01031',x:300,y:605});
- ln('small',[[287.5,620],[287.5,607.5]]);add({k:'inst',code:'PT',num:'01032',x:287.5,y:604.2});
- ln('pipe',[[340,620],[340,600]],{lineNo:'003',size:'DN300',...FW,from:'Discharge 002',to:'Nozzle F'});sy('relief',340,597,{tag:'PRV-1',tagPos:'left'});ln('pipe',[[343,597],[380,597],[380,505]],{lineNo:'003',size:'DN300',...FW,from:'Discharge 002',to:'Nozzle F'});sy('nozzle',380,501,{tag:'F',rot:270});
- ln('pipe',[[450,620],[450,505]],{lineNo:'004',size:'DN250',...FW,from:'Discharge 002',to:'Nozzle E'});sy('gate_nc',450,570,{rot:90});sy('nozzle',450,501,{tag:'E',rot:270});
+ ln('small',[[300,620],[300,608.3]]);add({k:'inst',code:'PS',num:'001',x:300,y:605});
+ ln('pipe',[[340,620],[340,600]],{lineNo:'003',size:'DN300',...FW,from:'Line 002',to:'Nozzle F'});sy('relief',340,597,{tag:'PRV-1',tagPos:'left'});ln('pipe',[[343,597],[380,597],[380,505]],{lineNo:'003',size:'DN300',...FW,from:'Line 002',to:'Nozzle F'});sy('nozzle',380,501,{tag:'F',rot:270});
+ ln('pipe',[[450,620],[450,505]],{lineNo:'004',size:'DN250',...FW,from:'Line 002',to:'Nozzle E'});sy('gate_nc',450,570,{rot:90});sy('nozzle',450,501,{tag:'E',rot:270});
  sy('gate_no',540,620);sy('flowarrow',565,620);sy('nozzle',919,620,{tag:'C'});
- add({k:'rect',style:'solid',x:600,y:660,w:120,h:95,label:'DIESEL CONTROLLER\nWBCAN + FIRECOACH (FPC1)',labelPos:'top'});
- ln('signal',[[303.3,605],[310,605],[310,640],[640,640],[640,660]]);
- ln('signal',[[290.7,604.2],[295,604.2],[295,645],[630,645],[630,660]]);
+ add({k:'rect',style:'solid',x:600,y:660,w:120,h:95,label:'CONTROL PANEL',labelPos:'top'});
+ ln('signal',[[302.6,605],[310,605],[310,640],[640,640],[640,660]]);
  ln('elec',[[260,741],[600,741]],{label:'start / stop'});
- // fuel supply from sheet 2
- const DFL={lineNo:'010',size:'DN25',medium:'DF',spec:'B1',dp:'10',dt:'40',from:'Fuel tank 1500 l',to:'Diesel engine 1'};
- ln('small',[[350,775],[240,775],[240,752]],DFL);sy('sol_nc',290,775,{tag:'Y1'});
- add({k:'opc',ref:'1',dir:'in',rot:0,x:355,y:775});
- sy('earth',160,800);
- d.sheets=[{id:uid(),name:'Fire pump set',items:I}];
- // sheet 2 – fuel system
+ const FU={lineNo:'010',size:'DN25',medium:'DF',spec:'B1',from:'Fuel tank',to:'Driver'};
+ ln('small',[[350,775],[240,775],[240,752]],FU);sy('sol_nc',290,775,{tag:'Y1'});
+ add({k:'opc',ref:'1',dir:'in',rot:0,x:355,y:775,attached:true});
+ d.sheets=[{id:uid(),name:'Pump set',items:I,pos:{}}];
  ({I,add,ln,sy}=mk());
- add({k:'rect',style:'dashed',x:150,y:40,w:760,h:760,label:'PUMPROOM',labelPos:'top'});
- add({k:'rect',style:'solid',x:330,y:360,w:90,h:45,label:'DOUBLE WALL\nFUEL TANK 1500 l'});
- ln('small',[[195,390],[330,390]],DFL);sy('ball_no',270,390);sy('ystrainer',240,390);
- add({k:'opc',ref:'1',dir:'out',rot:180,x:190,y:390});
- ln('small',[[350,360],[350,330]],{lineNo:'011',size:'DN32',medium:'BR',spec:'B1',from:'Fuel tank',to:'Nozzle M'});sy('flamebr',350,330);
- ln('small',[[400,360],[400,45]],{lineNo:'012',size:'DN50',medium:'DF',spec:'B1',from:'Nozzle K',to:'Fuel tank'});sy('fill',400,45);sy('sol_nc',400,200,{rot:90,tag:'Y2'});
- add({k:'text',text:'LS-01011',x:440,y:380,h:2,box:true});ln('signal',[[420,380],[438.5,380]]);
+ add({k:'rect',style:'solid',x:330,y:360,w:90,h:45,label:'FUEL TANK',attached:true});
+ ln('small',[[195,390],[330,390]],FU);sy('ball_no',270,390);sy('ystrainer',240,390);
+ add({k:'opc',ref:'1',dir:'out',rot:180,x:190,y:390,attached:true});
+ ln('small',[[350,360],[350,330]],{lineNo:'011',size:'DN32',medium:'BR',spec:'B1',from:'Fuel tank',to:'Atmosphere'});sy('flamebr',350,330);
+ add({k:'text',text:'LS-001',x:440,y:380,h:2,box:true});ln('signal',[[420,380],[438.5,380]]);
  ln('small',[[375,405],[375,420]],{lineNo:'013',size:'DN15',medium:'DR',spec:'B1',from:'Fuel tank',to:'Drain'});sy('ball_nc',375,412.5,{rot:90});sy('drain',375,420);
- d.sheets.push({id:uid(),name:'Fuel system',items:I});
+ d.sheets.push({id:uid(),name:'Fuel system',items:I,pos:{}});
  return d;
 }
 
@@ -1430,7 +1708,7 @@ $('#btnRight').onclick=()=>{$('#right').classList.toggle('open');$('#left').clas
 addEventListener('beforeunload',e=>{if(file.dirty){e.preventDefault();e.returnValue=''}});
 buildTools();
 (()=>{let s=null;try{s=JSON.parse(lsGet('pid.draft')||'null')}catch{}
- if(s&&s.D){D=normalize(s.D);file=s.file||{path:null,sha:null,dirty:false};cs=Math.min(s.cs||0,D.sheets.length-1)}else D=normalize(exampleDoc());
+ if(s&&s.D){D=normalize(s.D);file=s.file||{path:null,sha:null,dirty:false};cs=Math.min(s.cs||0,D.sheets.length-1)}else D=normalize(newDoc());
  renderAll();setTool('select');requestAnimationFrame(fit);
 })();
 </script>
