@@ -291,18 +291,22 @@ const today=()=>{const d=new Date();return `${String(d.getDate()).padStart(2,'0'
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2800)};
 
 /* ---------------- sheets ---------------- */
-const SHEETS={A0:[1189,841],A1:[841,594],A2:[594,420],A3:[420,297]};
-const FSCALE={A0:1,A1:.85,A2:.72,A3:.6};
+const SHEETS={A0:[1189,841],A1:[841,594],A2:[594,420],A3:[420,297],A4:[297,210]};
+const FSCALE={A0:1,A1:.85,A2:.72,A3:.6,A4:.5};
 const GRID=2.5;
 let D;      // current document
 let cs=0;   // current sheet index
 const S=()=>D.sheets[cs];
 const IT=()=>S().items;
-const sheet=()=>SHEETS[D.meta.format]||SHEETS.A0;
-const fs=()=>FSCALE[D.meta.format]||1;
+const fmtOf=s=>(s&&s.format)||D.meta.format||'A0';
+const oriOf=s=>(s&&s.orient)||D.meta.orient||'landscape';
+const dimsOf=s=>{const d=SHEETS[fmtOf(s)]||SHEETS.A0;return oriOf(s)==='portrait'?[d[1],d[0]]:[d[0],d[1]]};
+const sheet=()=>dimsOf(S());
+const fs=()=>FSCALE[fmtOf(S())]||1;
 const ss=()=>+D.meta.symScale||1;
 const TSc=it=>((+D.meta.textScale||100)/100)*((+(it&&it.ts)||100)/100); // text size factor
 const GAP=()=>+D.meta.labelGap||0;                                         // extra label distance (mm)
+const symS=it=>ss()*((+(it&&it.sz)||100)/100);                             // symbol size incl. per-item size %
 
 /* ---------------- primitives ---------------- */
 // fill: 0 none, 1 black, 2 white (masks what is behind it); lbl: 1 marks a movable label
@@ -322,6 +326,8 @@ const bow=f=>[P([[-3,-2],[0,0],[-3,2]],f),P([[3,-2],[0,0],[3,2]],f)];
 const actBox=(f,ch)=>[...bow(f),L(0,0,0,-2.4),R(-1.7,-5.4,3.4,3),T(0,-3.9,ch,1.7)];
 const goose=y=>PL([[0,y],[0,y-1.2],[.3,y-2],[1.1,y-2.5],[1.9,y-2],[2.2,y-1.2],[2.2,y-.7]]);
 const VK='valve afsluiter klep';
+// domed vessel outline: half body length, radius, cap depth, vertical?
+function dome(hl,r,cap,vert){const p=[],N=10;for(let i=0;i<=N;i++){const a=Math.PI-i*Math.PI/N;p.push([r*Math.cos(a),-hl-cap*Math.sin(a)])}for(let i=0;i<=N;i++){const a=-i*Math.PI/N;p.push([r*Math.cos(a),hl-cap*Math.sin(a)])}return vert?p:p.map(([x,y])=>[y,x])}
 const SYMS={
  gate_no:{n:'Gate valve (normally open)',c:'Valves',k:VK+' gate schuif schuifafsluiter isolation open isolating',note:'Standard isolation valve. Open triangles = normally open.',ports:H2,g:()=>bow(0)},
  gate_nc:{n:'Gate valve (normally closed)',c:'Valves',k:VK+' gate schuif schuifafsluiter isolation closed dicht gesloten',note:'Filled triangles = normally closed, e.g. test line or bypass.',ports:H2,g:()=>bow(1)},
@@ -356,11 +362,41 @@ const SYMS={
  manpump:{n:'Manual pump',c:'Equipment',k:'manual hand pump handpomp',ports:[[-2.5,0],[2.5,0]],g:()=>[C(0,0,2.5),T(0,0,'HP',1.4)]},
  lamp:{n:'Lamp',c:'Equipment',k:'lamp light lighting verlichting signaallamp',ports:[],g:()=>[C(0,0,2.2),L(-1.55,-1.55,1.55,1.55),L(-1.55,1.55,1.55,-1.55)]},
  earth:{n:'Earth',c:'Equipment',k:'earth ground aarde aarding',ports:[[0,0]],g:()=>[L(0,0,0,2),L(-2,2,2,2),L(-1.3,2.8,1.3,2.8),L(-.6,3.6,.6,3.6)]},
+ orifice:{n:'Orifice plate',c:'Fittings',k:'orifice plate meetflens meetplaat blende restriction restrictie flow measuring',ports:[[-.8,0],[.8,0]],g:()=>[L(-.8,-2.6,-.8,-.7),L(-.8,.7,-.8,2.6),L(.8,-2.6,.8,-.7),L(.8,.7,.8,2.6)]},
+ flowmeter:{n:'Flow meter',c:'Fittings',k:'flow meter flowmeter debietmeter test meter venturi annubar',note:'Inline flow meter, e.g. in the test line.',ports:[[-3.5,0],[3.5,0]],g:()=>[R(-3.5,-2.2,7,4.4),T(0,0,'FE',1.6)]},
+ footvalve:{n:'Foot valve with strainer',c:'Valves',k:VK+' foot valve voetklep zuigkorf suction strainer pit put open water bassin',note:'At the end of a suction line from open water or a pit.',ports:[[0,-3]],g:()=>[P([[-2,-3],[0,0],[2,-3]]),P([[-2,3],[0,0],[2,3]],1),R(-2.6,3,5.2,2.6),L(-2.6,4.3,2.6,4.3,{dash:[.6,.4]})]},
+ hosevalve:{n:'Hose valve / test outlet',c:'Valves',k:VK+' hose valve test outlet testaansluiting slangaansluiting storz test header brandslang landing valve',ports:[[0,3]],g:()=>[P([[-2,3],[0,0],[2,3]]),P([[3,-2],[0,0],[3,2]]),L(3.7,-1.7,3.7,1.7,{w:.5})]},
+ hydrant:{n:'Fire hydrant',c:'Equipment',k:'hydrant brandkraan fire hydrant bovengrondse ondergrondse',ports:[[0,3.5]],g:()=>[L(0,3.5,0,1.6),C(0,-.2,1.8),L(-2.9,-.2,-1.8,-.2,{w:.5}),L(1.8,-.2,2.9,-.2,{w:.5})]},
+ motor:{n:'Electric motor',c:'Equipment',k:'motor elektromotor electric motor e-motor aandrijving drive driver',note:'Use a short line between motor and pump for the shaft. Size (%) in Properties makes it bigger.',noCut:true,ports:[[3,0],[-3,0],[0,-3],[0,3]],g:()=>[C(0,0,3),T(0,0,'M',2.6)]},
+ diesel:{n:'Diesel engine',c:'Equipment',k:'diesel engine dieselmotor motor verbrandingsmotor aandrijving drive driver engine',noCut:true,ports:[[5,0],[-5,0],[0,-3.5],[0,3.5]],g:()=>[R(-5,-3.5,10,7),T(0,0,'D',2.8)]},
+ gearbox:{n:'Gearbox / right angle drive',c:'Equipment',k:'gearbox tandwielkast haakse overbrenging right angle gear drive reductor',noCut:true,ports:[[3,0],[-3,0],[0,-3],[0,3]],g:()=>[R(-3,-3,6,6),T(0,0,'G',2.4)]},
+ vessel:{n:'Vessel (vertical)',c:'Equipment',k:'vessel vat drukvat hydrofoor pressure vessel buffer accumulator expansion tank vertical staand',noCut:true,ports:[[0,-6.5],[0,6.5],[-3.5,0],[3.5,0]],g:()=>[P(dome(4.5,3.5,2,true))]},
+ tank:{n:'Tank (horizontal)',c:'Equipment',k:'tank horizontal liggende tank opslagtank storage diesel water dagtank day tank',noCut:true,ports:[[-9.5,0],[9.5,0],[0,-4],[0,4]],g:()=>[P(dome(7.5,4,2,false))]},
+ hex:{n:'Heat exchanger',c:'Equipment',k:'heat exchanger warmtewisselaar koeler cooler platenwisselaar',ports:[[-3,0],[3,0],[0,-3],[0,3]],g:()=>[C(0,0,3),PL([[-3,0],[-1.5,0],[-.75,-1.5],[.75,1.5],[1.5,0],[3,0]])]},
+ radiator:{n:'Radiator / air cooler',c:'Equipment',k:'radiator cooler koeler luchtkoeler air cooled radiateur koelwater',noCut:true,ports:[[-4,1.5],[4,1.5],[0,-3],[0,3]],g:()=>[R(-4,-3,8,6),PL([[-4,1.5],[-2.7,-1.5],[-1.3,1.5],[0,-1.5],[1.3,1.5],[2.7,-1.5],[4,1.5]])]},
+ fan:{n:'Fan',c:'Equipment',k:'fan ventilator ventilatie blower afzuiging',noCut:true,ports:[[-3,0],[3,0]],g:()=>[C(0,0,3),P([[0,0],[-1.2,-2.6],[1.2,-2.6]]),P([[0,0],[-1.2,2.6],[1.2,2.6]])]},
+ compressor:{n:'Compressor',c:'Equipment',k:'compressor luchtcompressor air compressor perslucht',ports:[[-3,0],[3,0]],g:()=>[C(0,0,3),L(-2.1,-2.1,2.4,-1.2),L(-2.1,2.1,2.4,1.2)]},
+ silencer:{n:'Exhaust silencer',c:'Equipment',k:'silencer geluiddemper uitlaatdemper muffler exhaust uitlaat demper',ports:[[-6,0],[6,0]],g:()=>[L(-6,0,-4,0),L(4,0,6,0),R(-4,-2.5,8,5),L(-1.5,-2.5,-1.5,2.5),L(1.5,-2.5,1.5,2.5)]},
+ battery:{n:'Battery',c:'Equipment',k:'battery accu batterij startaccu starter battery',noCut:true,ports:[[-3,0],[3,0]],g:()=>[L(-3,0,-.6,0),L(-.6,-2.5,-.6,2.5),L(.6,-1.3,.6,1.3,{w:.6}),L(.6,0,3,0)]},
  nozzle:{n:'Nozzle / interface',c:'Connections',k:'nozzle interface aansluiting tie-in battery limit koppeling flens scope',note:'The letter matches the piping interfaces table (Project tab). For continuing a line on another sheet use the off-page connector.',ports:[[-4,0],[4,0]],inner:true,legend:false,g:it=>[P([[-4,-2],[2,-2],[4,0],[2,2],[-4,2]]),T(-.8,0,it.tag||'?',2)]},
  flowarrow:{n:'Flow direction',c:'Connections',k:'flow direction stroomrichting arrow pijl',ports:[],legend:false,g:()=>[P([[-1.6,-1.2],[1.6,0],[-1.6,1.2]],1)]},
 };
-const INST={PI:'Pressure indicator',PS:'Pressure switch',PSL:'Pressure switch (low)',PT:'Pressure transducer',FI:'Flow indicator',FS:'Flow switch',FT:'Flow transmitter',LG:'Level gauge',LS:'Level switch',LSL:'Level switch (low)',LSH:'Level switch (high)',TG:'Temperature gauge',TI:'Temperature indicator',TS:'Temperature switch',TT:'Temperature transmitter',SS:'Speed switch',HS:'Hand switch',XI:'Indicator',XL:'Lamp',XA:'Output signal'};
-const INSTK={PI:'manometer pressure gauge drukmeter druk',PS:'drukschakelaar pressostaat pressure switch start',PSL:'low pressure switch lage druk',PT:'pressure transmitter transducer druktransmitter druksensor sensor',FI:'flow meter flowmeter debietmeter',FS:'flow switch flowschakelaar stromingsschakelaar',FT:'flow transmitter debiet',LG:'level gauge peilglas niveau peil',LS:'level switch niveauschakelaar vlotter float niveau',LSL:'low level switch laag niveau vlotter',LSH:'high level switch hoog niveau vlotter overfill',TG:'thermometer temperature gauge temperatuur',TI:'temperature indicator temperatuur',TS:'thermostat temperatuurschakelaar temperature switch frost vorst',TT:'pt100 temperature sensor transmitter temperatuur',SS:'speed switch toerenschakelaar overspeed toerental',HS:'hand switch handschakelaar knop button drukknop',XI:'indicator signal melding',XL:'lamp light signal lamp signaallamp',XA:'output signal alarm uitgang potentiaalvrij contact'};
+const INST={PI:'Pressure indicator',PS:'Pressure switch',PSL:'Pressure switch (low)',PT:'Pressure transducer',FI:'Flow indicator',FS:'Flow switch',FT:'Flow transmitter',LG:'Level gauge',LS:'Level switch',LSL:'Level switch (low)',LSH:'Level switch (high)',TG:'Temperature gauge',TI:'Temperature indicator',TS:'Temperature switch',TT:'Temperature transmitter',SS:'Speed switch',HS:'Hand switch',XI:'Indicator',XL:'Lamp',XA:'Output signal',
+ TR:'Temperature recorder',TC:'Temperature controller',TE:'Temperature element',FR:'Flow recorder',FC:'Flow controller',FE:'Flow element',FQ:'Flow totaliser',
+ LI:'Level indicator',LT:'Level transmitter',LR:'Level recorder',LC:'Level controller',LA:'Level alarm',PR:'Pressure recorder',PC:'Pressure controller',
+ PIC:'Pressure indicating controller',PRC:'Pressure recording controller',PDI:'Differential pressure indicator',PDS:'Differential pressure switch',PDT:'Differential pressure transmitter',
+ SI:'Speed indicator',ST:'Speed transmitter',ZS:'Position switch',AT:'Analyser transmitter',AI:'Analyser indicator','I/P':'Current-to-pneumatic converter'};
+const ISHAPE={circle:'Circle – discrete instrument',shared:'Square with circle – shared display / DCS',plc:'Square with diamond – PLC / programmable',computer:'Octagon – computer function',half:'Half circle (dome)',transducer:'Circle with diagonal – transducer / converter'};
+const ISHN={circle:'Instrument',shared:'Shared display / DCS',plc:'PLC function',computer:'Computer function',half:'Dome indicator',transducer:'Transducer / converter'};
+const ILOC={field:'Field mounted (no line)',main:'Main panel / control room (single line)',aux:'Local panel (double line)',hidden:'Behind panel, not accessible (dashed line)'};
+const ILOCN={field:'field mounted',main:'main panel',aux:'local panel',hidden:'behind panel'};
+const locOf=it=>it.loc||(it.panel?'main':'field');
+const INSTK={PI:'manometer pressure gauge drukmeter druk',PS:'drukschakelaar pressostaat pressure switch start',PSL:'low pressure switch lage druk',PT:'pressure transmitter transducer druktransmitter druksensor sensor',FI:'flow meter flowmeter debietmeter',FS:'flow switch flowschakelaar stromingsschakelaar',FT:'flow transmitter debiet',LG:'level gauge peilglas niveau peil',LS:'level switch niveauschakelaar vlotter float niveau',LSL:'low level switch laag niveau vlotter',LSH:'high level switch hoog niveau vlotter overfill',TG:'thermometer temperature gauge temperatuur',TI:'temperature indicator temperatuur',TS:'thermostat temperatuurschakelaar temperature switch frost vorst',TT:'pt100 temperature sensor transmitter temperatuur',SS:'speed switch toerenschakelaar overspeed toerental',HS:'hand switch handschakelaar knop button drukknop',XI:'indicator signal melding',XL:'lamp light signal lamp signaallamp',XA:'output signal alarm uitgang potentiaalvrij contact',
+ TR:'temperature recorder registratie',TC:'temperature controller regelaar',TE:'temperature element pt100 thermokoppel thermocouple sensor',FR:'flow recorder',FC:'flow controller regelaar',FE:'flow element orifice meetflens',FQ:'flow totaliser totalizer teller',
+ LI:'level indicator niveau',LT:'level transmitter niveautransmitter',LR:'level recorder',LC:'level controller niveauregelaar',LA:'level alarm niveaualarm',PR:'pressure recorder',PC:'pressure controller drukregelaar',
+ PIC:'pressure indicating controller',PRC:'pressure recording controller',PDI:'differential pressure indicator verschildruk',PDS:'differential pressure switch verschildrukschakelaar filter',PDT:'differential pressure transmitter verschildruk',
+ SI:'speed indicator toerenteller rpm',ST:'speed transmitter toerental',ZS:'position switch eindschakelaar standmelder kleppenstand supervisory limit',AT:'analyser analyzer analyse',AI:'analyser analyzer',
+ 'I/P':'transducer converter omvormer i/p positioner'};
 const LS={
  pipe:{n:'Process pipe',w:.5,layer:'PIPE',k:'pipe leiding process piping buis'},
  small:{n:'Small bore / drain line',w:.3,layer:'PIPE',k:'small bore drain line kleine leiding aftap instrument tubing impulse'},
@@ -373,6 +409,7 @@ const RS={solid:{n:'Box',w:.35,layer:'EQUIP'},equip:{n:'Equipment (heavy)',w:.6,
 const MEDIA={FW:'Fire water',DF:'Diesel fuel',EX:'Exhaust gas',CW:'Cooling water',DR:'Drain',VT:'Vent',BR:'Breather',AIR:'Air',HY:'Hydraulic',FO:'Foam'};
 const SIZES=['DN15','DN20','DN25','DN32','DN40','DN50','DN65','DN80','DN100','DN125','DN150','DN200','DN250','DN300','DN350','DN400','DN450','DN500','DN600'];
 const INSUL=['None','Heat conservation','Personnel protection','Frost protection','Acoustic'];
+const LINKS={process:{n:'Process / impulse line',w:.25},signal:{n:'Signal line',w:.2,dash:[1.6,1]},elec:{n:'Electrical',w:.2,dash:[3.5,.9,.5,.9]}};
 const BLOCKS={title:'Title block',revisions:'Revision table',nozzles:'Piping interfaces table',legend:'Legend',notes:'General notes'};
 
 /* ---------------- geometry ---------------- */
@@ -393,8 +430,38 @@ function xform(prims,o,layer,mask=true){
   return q;
  });
 }
-function portsOf(it){const def=SYMS[it.s];if(!def)return [];const tp=tpFn(it.x,it.y,it.rot||0,it.flip,ss());return def.ports.map(([a,b])=>{const [x,y]=tp(a,b);return {x,y}})}
-function instR(it){const s=ss(),k=TSc(it),c=it.code||'PI',n=it.num||'';return Math.max(2.6*s,Math.max(textW(c,1.6*s*k),textW(n,1.3*s*k))/2+.7*s)}
+function portsOf(it){const def=SYMS[it.s];if(!def)return [];const tp=tpFn(it.x,it.y,it.rot||0,it.flip,symS(it));return def.ports.map(([a,b])=>{const [x,y]=tp(a,b);return {x,y}})}
+function instDims(it){
+ const s=ss(),k=TSc(it),c=String(it.code??'PI'),n=String(it.num||''),hc=1.5*s*k,hn=1.25*s*k,shape=it.shape||'circle',loc=locOf(it),g=loc==='aux'?.55*s:0;
+ const two=shape!=='transducer'&&shape!=='half'&&(loc!=='field'||!!n),wmax=Math.max(textW(c,hc),textW(n,hn));let r;
+ if(shape==='transducer'){const [a='',b='']=c.split('/');r=Math.max(2.8*s,(Math.max(textW(a,hc),textW(b,hc))/2+.4*s)*1.6)}
+ else if(shape==='half')r=Math.max(2.6*s,textW(c,hc)/2+.9*s);
+ else if(two)r=Math.max(2.6*s,(wmax/2+.35*s)/.75,g+1.45*Math.max(hc,hn)+.6*s);
+ else r=Math.max(2.6*s,wmax/2+.7*s);
+ if(shape==='plc')r=Math.max(r,two?(wmax/2+.3*s)/.45:wmax/2+hc/2+.4*s);
+ return {r,s,hc,hn,shape,loc,g,two,c,n};
+}
+function instR(it){return instDims(it).r}
+/* outline + location line(s): single = main panel, double = local panel, dashed = behind panel */
+function instShape(x,y,d,o){
+ const {r,shape,loc,g,s}=d,W={w:.25,...o},out=[];
+ if(shape==='shared')out.push(R(x-r,y-r,2*r,2*r,2,W),C(x,y,r,0,W));
+ else if(shape==='plc')out.push(R(x-r,y-r,2*r,2*r,2,W),P([[x,y-r],[x+r,y],[x,y+r],[x-r,y]],0,true,W));
+ else if(shape==='computer'){const a=r*.414;out.push(P([[x-a,y-r],[x+a,y-r],[x+r,y-a],[x+r,y+a],[x+a,y+r],[x-a,y+r],[x-r,y+a],[x-r,y-a]],2,true,W))}
+ else if(shape==='half'){const p=[];for(let i=0;i<=16;i++){const t=Math.PI+i*Math.PI/16;p.push([x+r*Math.cos(t),y+r*Math.sin(t)])}out.push(P(p,2,true,W))}
+ else out.push(C(x,y,r,2,W));
+ if(shape==='transducer')out.push(L(x-.707*r,y+.707*r,x+.707*r,y-.707*r,W));
+ if(shape!=='half'&&shape!=='transducer'&&loc!=='field'){
+  const hw=yy=>(shape==='circle'||shape==='shared')?Math.sqrt(Math.max(0,r*r-yy*yy)):r;
+  const line=(yy,dash)=>out.push(L(x-hw(yy),y+yy,x+hw(yy),y+yy,dash?{...W,dash}:W));
+  if(loc==='main')line(0);else if(loc==='hidden')line(0,[1*s,.7*s]);else{line(-g);line(g)}
+ }
+ return out;
+}
+function instInside(it,pt,m=0){const d=instDims(it),dx=pt[0]-it.x,dy=pt[1]-it.y,r=d.r+m;
+ if(d.shape==='circle'||d.shape==='transducer')return Math.hypot(dx,dy)<=r;
+ if(d.shape==='half')return Math.abs(dx)<=r&&dy>=-r&&dy<=m;
+ return Math.abs(dx)<=r&&Math.abs(dy)<=r}
 function bboxOf(prims){
  let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;const ext=(x,y)=>{if(x<x1)x1=x;if(y<y1)y1=y;if(x>x2)x2=x;if(y>y2)y2=y};
  for(const p of prims){
@@ -413,8 +480,26 @@ function onSeg(p,A,B,t=.06){
  const dx=B[0]-A[0],dy=B[1]-A[1],l=Math.hypot(dx,dy);if(!l)return near(p,A,t);
  return Math.abs((p[0]-A[0])*dy-(p[1]-A[1])*dx)/l<t;
 }
-const inlineOn=(o,A,B)=>{if(o.k!=='sym')return false;const ps=portsOf(o);return ps.length>=2?onSeg([ps[0].x,ps[0].y],A,B)&&onSeg([ps[1].x,ps[1].y],A,B):onSeg([o.x,o.y],A,B)};
+const inlineOn=(o,A,B)=>{if(o.k!=='sym'||SYMS[o.s]?.noCut)return false;const ps=portsOf(o);return ps.length>=2?onSeg([ps[0].x,ps[0].y],A,B)&&onSeg([ps[1].x,ps[1].y],A,B):onSeg([o.x,o.y],A,B)};
 const isHor=(A,B)=>Math.abs(A[1]-B[1])<1e-6, isVer=(A,B)=>Math.abs(A[0]-B[0])<1e-6;
+const collin=(a,b,c)=>(isHor(a,b)&&isHor(b,c)&&Math.sign(b[0]-a[0])===Math.sign(c[0]-b[0]))||(isVer(a,b)&&isVer(b,c)&&Math.sign(b[1]-a[1])===Math.sign(c[1]-b[1]));
+
+/* ---------------- instrument connection line (belongs to the instrument, not in the line list) ---------------- */
+function instLinkPts(it){
+ const k=it.link;if(!k)return null;const r=instR(it),bx=it.x,by=it.y,tx=k.x,ty=k.y;
+ if(Math.hypot(tx-bx,ty-by)<=r+.05)return null;
+ const sx=Math.sign(tx-bx)||1,sy=Math.sign(ty-by)||1,dx=Math.abs(tx-bx),dy=Math.abs(ty-by);
+ const rv=it.shape==='half'&&sy>0?0:r;
+ if(dx<.01)return [[tx,ty],[bx,by+sy*rv]];
+ if(dy<.01)return [[tx,ty],[bx+sx*r,by]];
+ if((k.dir||'v')==='v'){if(dx<r)return [[tx,ty],[tx,by+sy*Math.sqrt(r*r-dx*dx)]];return [[tx,ty],[tx,by],[bx+sx*r,by]]}
+ if(dy<r)return [[tx,ty],[bx+sx*Math.sqrt(r*r-dy*dy),ty]];return [[tx,ty],[bx,ty],[bx,by+sy*rv]];
+}
+function linkDirAt(sp){
+ if(sp.dir!==undefined)return Math.abs(Math.sin(sp.dir))<.5?'v':'h';
+ if(sp.line){const i=sp.line.pts.findIndex(p=>near(p,[sp.x,sp.y]));const q=sp.line.pts[i+1]||sp.line.pts[i-1];if(q)return isHor(q,[sp.x,sp.y])?'v':'h'}
+ return 'v';
+}
 
 /* ---------------- lines: designation ---------------- */
 function lineDesig(it){
@@ -449,20 +534,59 @@ function opcTexts(it){
 function nextOpcRef(){let m=0;D.sheets.forEach(s=>s.items.forEach(o=>{if(o.k==='opc'){const n=parseInt(o.ref,10);if(n>m)m=n}}));return String(m+1)}
 
 /* ---------------- attachment: which line ends touch an object ---------------- */
-function touchesObj(it,pt){
- if(it.k==='sym')return portsOf(it).some(a=>near([a.x,a.y],pt));
- if(it.k==='opc'){const p=opcPort(it);return near([p.x,p.y],pt)}
- if(it.k==='inst'){const r=instR(it),d=Math.hypot(pt[0]-it.x,pt[1]-it.y);return Math.abs(d-r)<.9}
- let b=null;
- if(it.k==='rect')b={x:it.x,y:it.y,w:it.w,h:it.h};
- else if(it.k==='text'&&it.box){const fr=itemPrims(it).find(p=>p.t==='poly');if(fr)b=bboxOf([fr])}
- if(!b)return false;
- const t=.7,inX=pt[0]>=b.x-t&&pt[0]<=b.x+b.w+t,inY=pt[1]>=b.y-t&&pt[1]<=b.y+b.h+t;
- return (inX&&(Math.abs(pt[1]-b.y)<t||Math.abs(pt[1]-b.y-b.h)<t))||(inY&&(Math.abs(pt[0]-b.x)<t||Math.abs(pt[0]-b.x-b.w)<t));
+function symBox(it){const def=SYMS[it.s];return def?bboxOf(xform(def.g(it),{x:it.x,y:it.y,rot:it.rot||0,flip:it.flip,s:symS(it)},'S')):null}
+const inBox=(b,pt,m=0)=>b&&pt[0]>=b.x-m&&pt[0]<=b.x+b.w+m&&pt[1]>=b.y-m&&pt[1]<=b.y+b.h+m;
+function objFrame(it){
+ if(it.k==='rect')return {x:it.x,y:it.y,w:it.w,h:it.h};
+ if(it.k==='text'&&it.box){const fr=itemPrims(it).find(p=>p.t==='poly');return fr?bboxOf([fr]):null}
+ return null;
 }
+/* a line end counts as connected when it is on a port / edge, or anywhere inside the object's frame */
+function touchesObj(it,pt){
+ if(it.k==='sym')return portsOf(it).some(a=>near([a.x,a.y],pt))||inBox(symBox(it),pt,.5);
+ if(it.k==='opc'){const p=opcPort(it);if(near([p.x,p.y],pt))return true;const s_=ss();return inBox(bboxOf(xform([P([[-5,-2.5],[5,-2.5],[5,2.5],[-5,2.5]])],{x:it.x,y:it.y,rot:it.rot||0,s:s_},'S')),pt,.5)}
+ if(it.k==='inst')return instInside(it,pt,.9);
+ const b=objFrame(it);if(!b)return false;
+ const t=.7;
+ if(it.k==='rect'&&it.style==='dashed'){const inX=pt[0]>=b.x-t&&pt[0]<=b.x+b.w+t,inY=pt[1]>=b.y-t&&pt[1]<=b.y+b.h+t;
+  return (inX&&(Math.abs(pt[1]-b.y)<t||Math.abs(pt[1]-b.y-b.h)<t))||(inY&&(Math.abs(pt[0]-b.x)<t||Math.abs(pt[0]-b.x-b.w)<t))}
+ return inBox(b,pt,t);
+}
+/* drawn line stops at the edge of a box / bubble it ends in (stored points stay unchanged) */
+function trimEnd(Pp,E,self){
+ const inside=[];let onSym=false;
+ for(const o of IT()){if(o===self||o.k==='line')continue;
+  if(o.k==='sym'||o.k==='opc'){if(touchesObj(o,E)){onSym=true;break}continue}
+  if(o.k==='inst'){if(instInside(o,E)&&!instInside(o,Pp))inside.push({o,a:instR(o)**2});continue}
+  if(o.k==='rect'&&o.style==='dashed')continue;
+  const b=objFrame(o);if(b&&inBox(b,E)&&!inBox(b,Pp))inside.push({o,b,a:b.w*b.h});
+ }
+ if(onSym||!inside.length)return E;
+ inside.sort((p,q)=>p.a-q.a);const {o,b}=inside[0],dx=E[0]-Pp[0],dy=E[1]-Pp[1];
+ const at=t=>[Pp[0]+dx*t,Pp[1]+dy*t];
+ if(o.k==='inst'){const d=instDims(o);
+  if(d.shape==='circle'||d.shape==='transducer'){const fx=Pp[0]-o.x,fy=Pp[1]-o.y,A=dx*dx+dy*dy,B=2*(fx*dx+fy*dy),Cc=fx*fx+fy*fy-d.r*d.r,D=B*B-4*A*Cc;if(D<0||!A)return E;const t=(-B-Math.sqrt(D))/(2*A);return t>=0&&t<=1?at(t):E}
+  const r=d.r;return clipBox({x:o.x-r,y:o.y-r,w:2*r,h:d.shape==='half'?r:2*r},Pp,dx,dy,at,E)}
+ return clipBox(b,Pp,dx,dy,at,E);
+}
+function clipBox(b,Pp,dx,dy,at,E){
+ const ent=(p,d,lo,hi)=>d>0?(lo-p)/d:d<0?(hi-p)/d:-Infinity;
+ const t=Math.max(ent(Pp[0],dx,b.x,b.x+b.w),ent(Pp[1],dy,b.y,b.y+b.h));return t>=0&&t<=1?at(t):E;
+}
+function trimPts(it){const tp=it.pts.map(p=>[...p]),n=tp.length-1;if(n<1)return tp;tp[0]=trimEnd(it.pts[1],it.pts[0],it);tp[n]=trimEnd(it.pts[n-1],it.pts[n],it);return tp}
 function lineEndsTouching(it,items){const out=[];items.forEach(l=>{if(l.k!=='line'||l===it)return;[0,l.pts.length-1].forEach((k,j)=>{if(touchesObj(it,l.pts[k]))out.push({l,end:j})})});return out}
-function inlineSegs(it,items){const out=[];if(it.k!=='sym'||portsOf(it).length<2)return out;items.forEach(l=>{if(l.k!=='line')return;for(let i=1;i<l.pts.length;i++)if(inlineOn(it,l.pts[i-1],l.pts[i])){out.push({l,i});break}});return out}
-const attachCount=it=>lineEndsTouching(it,IT()).length+inlineSegs(it,IT()).length;
+function inlineSegs(it,items){const out=[];if(it.k!=='sym'||SYMS[it.s]?.noCut||portsOf(it).length<2)return out;items.forEach(l=>{if(l.k!=='line')return;for(let i=1;i<l.pts.length;i++)if(inlineOn(it,l.pts[i-1],l.pts[i])){out.push({l,i});break}});return out}
+function lineLinksInfo(l,items){
+ const others=[],own=[],lines=items.filter(o=>o.k==='line'&&o!==l);
+ lines.forEach(o=>[0,o.pts.length-1].forEach((k,j)=>{const p=o.pts[k];for(let i=1;i<l.pts.length;i++)if(onSeg(p,l.pts[i-1],l.pts[i])){others.push({l:o,end:j});break}}));
+ [0,l.pts.length-1].forEach((k,j)=>{const p=l.pts[k];
+  if(lines.some(o=>near(o.pts[0],p)||near(o.pts[o.pts.length-1],p)))return; // end-to-end: the other line follows
+  for(const o of lines)for(let i=1;i<o.pts.length;i++)if(onSeg(p,o.pts[i-1],o.pts[i])){own.push({end:j,host:o,hor:isHor(o.pts[i-1],o.pts[i])});return}
+  const ob=items.find(o=>o.k!=='line'&&touchesObj(o,p));if(ob)own.push({end:j,obj:ob});
+ });
+ return {others,own};
+}
+const attachCount=it=>{if(it.k==='line'){const r=lineLinksInfo(it,IT());return r.others.length+r.own.length}return lineEndsTouching(it,IT()).length+inlineSegs(it,IT()).length};
 
 /* move one end of a line, keeping its segments horizontal / vertical */
 function moveLineEnd(l,end,dx,dy){
@@ -487,6 +611,7 @@ function moveSegment(l,i,d,items,exclude=new Set()){
  if(!d)return;const pts=l.pts,A=[...pts[i-1]],B=[...pts[i]],hor=isHor(A,B),dx=hor?0:d,dy=hor?d:0,last=pts.length-1;
  const others=items.filter(o=>o!==l&&!exclude.has(o.id));
  const tees=[];others.forEach(o=>{if(o.k!=='line')return;[0,o.pts.length-1].forEach((k,j)=>{if(onSeg(o.pts[k],A,B))tees.push({o,end:j})})});
+ const lk=others.filter(o=>o.k==='inst'&&o.link&&onSeg([o.link.x,o.link.y],A,B));
  const objs=others.filter(o=>o.k!=='line'&&(inlineOn(o,A,B)||(o.attached&&((i-1===0&&touchesObj(o,A))||(i===last&&touchesObj(o,B))))));
  let ai=i-1,bi=i;const perp=(P,Q)=>hor?isVer(P,Q):isHor(P,Q);
  if(bi<last&&!perp(pts[bi+1],B))pts.splice(bi+1,0,[...B]);
@@ -494,25 +619,57 @@ function moveSegment(l,i,d,items,exclude=new Set()){
  pts[ai]=[A[0]+dx,A[1]+dy];pts[bi]=[B[0]+dx,B[1]+dy];
  tees.forEach(({o,end})=>moveLineEnd(o,end,dx,dy));
  objs.forEach(o=>moveItem(o,dx,dy));
+ lk.forEach(o=>{o.link.x+=dx;o.link.y+=dy});
  cleanPts(l);
 }
 /* move selected items; attached objects take their lines along */
 function applyMove(ids,dx,dy){
- const items=IT(),ends=[],segs=[];
+ const items=IT(),ends=[],segs=[],own=[];
+ ids.forEach(id=>{const it=byId(id);if(!it||it.k!=='line'||!it.attached)return;
+  const r=lineLinksInfo(it,items);
+  r.others.forEach(e=>{if(!ids.has(e.l.id))ends.push(e)});
+  r.own.forEach(o=>{if((o.obj&&ids.has(o.obj.id))||(o.host&&ids.has(o.host.id)))return;own.push({l:it,...o})});
+ });
+ // instrument connection points sitting on something that moves, move along
+ const links=items.filter(o=>o.k==='inst'&&o.link&&items.some(x=>ids.has(x.id)&&(
+  (x.k==='line'&&x.pts.some((p,i)=>i&&onSeg([o.link.x,o.link.y],x.pts[i-1],p)))||
+  (x.k==='sym'&&portsOf(x).some(q=>near([q.x,q.y],[o.link.x,o.link.y]))))));
  ids.forEach(id=>{const it=byId(id);if(!it||it.k==='line'||!it.attached)return;
   lineEndsTouching(it,items).forEach(e=>{if(!ids.has(e.l.id))ends.push(e)});
   inlineSegs(it,items).forEach(s=>{if(!ids.has(s.l.id))segs.push(s)})});
  ids.forEach(id=>{const it=byId(id);if(it)moveItem(it,dx,dy)});
+ links.forEach(o=>{o.link.x+=dx;o.link.y+=dy});
  segs.forEach(({l,i})=>{const A=l.pts[i-1],B=l.pts[i];if(isHor(A,B)&&dy)moveSegment(l,i,dy,items,ids);else if(isVer(A,B)&&dx)moveSegment(l,i,dx,items,ids)});
  const seen=new Set();ends.forEach(({l,end})=>{const key=l.id+end;if(seen.has(key))return;seen.add(key);moveLineEnd(l,end,dx,dy)});
+ // ends of a moved attached line stay on what they were connected to
+ own.forEach(({l,end,obj,hor})=>{if(obj)moveLineEnd(l,end,-dx,-dy);else moveLineEnd(l,end,hor?0:-dx,hor?-dy:0)});
 }
+/* move an inner corner of a line; neighbouring segments stay horizontal / vertical */
+function moveVertexOrtho(l,i,p){
+ const pts=l.pts,V=[...pts[i]],last=pts.length-1;
+ const plan=j=>{const N=pts[j];if(!N)return null;const h=isHor(N,V),v=isVer(N,V);if(!h&&!v)return null;
+  const far=pts[j+(j>i?1:-1)],isEnd=j===0||j===last,slide=!isEnd&&far&&(h?isVer(far,N):isHor(far,N));return {j,N:[...N],h,slide,isEnd}};
+ const nx=plan(i+1),pv=plan(i-1);
+ const apply=(q,after)=>{if(!q)return;const {j,N,h,slide,isEnd}=q;
+  if(h&&Math.abs(N[1]-p[1])<1e-6)return;if(!h&&Math.abs(N[0]-p[0])<1e-6)return;
+  if(slide){pts[j]=h?[N[0],p[1]]:[p[0],N[1]];return}
+  const m=h?(isEnd?gr((N[0]+p[0])/2):N[0]):(isEnd?gr((N[1]+p[1])/2):N[1]);
+  const a=h?[m,N[1]]:[N[0],m],b=h?[m,p[1]]:[p[0],m];
+  if(after)pts.splice(j,0,b,a);else pts.splice(j+1,0,a,b)};
+ apply(nx,true);pts[i]=[...p];apply(pv,false);cleanPts(l);
+}
+function simplifyLine(l){cleanPts(l);l.pts=l.pts.filter((p,i,a)=>i===0||i===a.length-1||!collin(a[i-1],p,a[i+1]))}
+function joinCands(l){const out=[];[0,l.pts.length-1].forEach((k,j)=>IT().forEach(o=>{if(o.k!=='line'||o===l)return;[0,o.pts.length-1].forEach((q,oe)=>{if(near(o.pts[q],l.pts[k]))out.push({j,o,oe})})}));return out}
+function joinLines(l,c){let a=l.pts,b=c.o.pts;if(c.j===0)a=[...a].reverse();if(c.oe===1)b=[...b].reverse();l.pts=a.concat(b.slice(1));
+ ['lineNo','size','medium','spec','from','to','dp','dt','tp','insul','remarks'].forEach(f=>{if(!l[f]&&c.o[f])l[f]=c.o[f]});
+ S().items=IT().filter(x=>x!==c.o);simplifyLine(l)}
 
 /* ---------------- item → primitives ---------------- */
 function cutSegment(ax,ay,bx,by){
  const dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy;if(len2<1e-6)return [];
  const iv=[];
  for(const it of IT()){
-  if(it.k!=='sym')continue;const pts=portsOf(it);if(pts.length<2)continue;
+  if(it.k!=='sym'||SYMS[it.s]?.noCut)continue;const pts=portsOf(it);if(pts.length<2)continue;
   const ts=[];let ok=true;
   for(const p of pts.slice(0,2)){const t=((p.x-ax)*dx+(p.y-ay)*dy)/len2,cx=ax+t*dx,cy=ay+t*dy;
    if(Math.hypot(cx-p.x,cy-p.y)>.05||t<-1e-3||t>1+1e-3){ok=false;break}ts.push(t)}
@@ -529,7 +686,7 @@ function itemPrims(it){
  const s=ss(),k=TSc(it);
  if(it.k==='sym'){
   const def=SYMS[it.s];if(!def)return [];
-  const pr=xform(def.g(it),{x:it.x,y:it.y,rot:it.rot||0,flip:it.flip,s},'SYMBOL');
+  const pr=xform(def.g(it),{x:it.x,y:it.y,rot:it.rot||0,flip:it.flip,s:symS(it)},'SYMBOL');
   if(it.tag&&!def.inner){
    const b=bboxOf(pr),h=1.9*s*k,g=1.4*s+GAP(),pos=it.tagPos||'above',o={layer:'TEXT',lbl:1};
    pr.push(pos==='below'?T(it.x,b.y+b.h+g+h/2,it.tag,h,o):pos==='left'?T(b.x-g,it.y,it.tag,h,{...o,align:'right'}):pos==='right'?T(b.x+b.w+g,it.y,it.tag,h,{...o,align:'left'}):T(it.x,b.y-g-h/2,it.tag,h,o));
@@ -553,19 +710,21 @@ function itemPrims(it){
   return shiftLbl(pr,it);
  }
  if(it.k==='inst'){
-  const r=instR(it),o={layer:'INST'},out=[C(it.x,it.y,r,2,{w:.25,...o})];
-  if(it.panel)out.push(L(it.x-r,it.y,it.x+r,it.y,{w:.25,...o}));
-  if(it.num){out.push(T(it.x,it.y-r*.38,it.code||'PI',1.6*s*k,o),T(it.x,it.y+r*.42,it.num,1.3*s*k,o))}
-  else out.push(T(it.x,it.y,it.code||'PI',1.6*s*k,o));
+  const d=instDims(it),{r,hc,hn,c,n}=d,o={layer:'INST'},out=[],x=it.x,y=it.y;
+  const lp=instLinkPts(it);if(lp){const st=LINKS[it.linkStyle||'process']||LINKS.process;out.push({...PL(lp),w:st.w,dash:st.dash,layer:'INST'})}
+  out.push(...instShape(x,y,d,o));
+  if(d.shape==='transducer'){const [a='',b='']=c.split('/');out.push(T(x-.33*r,y-.33*r,a,hc,{...o,ang:45}),T(x+.33*r,y+.33*r,b,hc,{...o,ang:45}));if(n)out.push(T(x,y+r+hn,n,hn,o))}
+  else if(d.shape==='half'){out.push(T(x,y-.42*r,c,hc,o));if(n)out.push(T(x,y+hn*.9,n,hn,o))}
+  else if(d.two){const off=(d.g+r)/2+.05*d.s;out.push(T(x,y-off,c,hc,o));if(n)out.push(T(x,y+off,n,hn,o))}
+  else out.push(T(x,y,c,hc,o));
   return out;
  }
  if(it.k==='line'){
   const st=LS[it.style]||LS.pipe,o={w:st.w,dash:st.dash,layer:st.layer},out=[];
-  const pts=it.pts;
-  for(let i=1;i<pts.length;i++){
-   const segs=(st.layer==='PIPE')?cutSegment(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]):[[...pts[i-1],...pts[i]]];
-   segs.forEach(sg=>out.push(L(...sg,o)));
-  }
+  const pts=trimPts(it);
+  // straight runs over several points are treated as one piece, so valves on a split point still cut the pipe
+  const runs=[];let a0=pts[0];for(let i=1;i<pts.length;i++){const b=pts[i],nx=pts[i+1];if(nx&&collin(a0,b,nx))continue;runs.push([a0,b]);a0=b}
+  runs.forEach(([a,b])=>{const segs=(st.layer==='PIPE')?cutSegment(a[0],a[1],b[0],b[1]):[[...a,...b]];segs.forEach(sg=>out.push(L(...sg,o)))});
   const arrow=(tip,from)=>{const dx=tip[0]-from[0],dy=tip[1]-from[1],l=Math.hypot(dx,dy)||1,ux=dx/l,uy=dy/l,a=2.4*s,b=.9*s;
    out.push(P([[tip[0],tip[1]],[tip[0]-ux*a-uy*b,tip[1]-uy*a+ux*b],[tip[0]-ux*a+uy*b,tip[1]-uy*a-ux*b]],1,true,{w:.2,layer:st.layer}))};
   if(pts.length>1){if(it.arrowEnd)arrow(pts[pts.length-1],pts[pts.length-2]);if(it.arrowStart)arrow(pts[0],pts[1])}
@@ -675,6 +834,7 @@ function framePrims(){
     if(e.sym)centred(SYMS[e.sym].g({tag:''}));
     else if(e.opc)centred([P([[-5,-2.5],[2.5,-2.5],[5,0],[2.5,2.5],[-5,2.5]]),T(-1.2,0,'1',2.2)]);
     else if(e.inst){const r=2.3*f;add(C(cx,cy,r,2,{w:.25}),T(cx,cy,e.inst,(e.inst.length>2?1.15:1.35)*f))}
+    else if(e.ivar){const [sh,lc]=e.ivar.split('|');instShape(cx,cy,{r:2.3*f,shape:sh,loc:lc,g:.45*f,s:f},{}).forEach(p=>add(p))}
     else if(e.line){const st=LS[e.line];add(L(cx-5*f,cy,cx+5*f,cy,{w:st.w,dash:st.dash}))}
     add(T(lx+16*f,cy,e.n.toUpperCase(),1.75*f,{align:'left'}));
    });
@@ -692,11 +852,12 @@ function framePrims(){
  return out;
 }
 function legendEntries(){
- const syms=new Set(),insts=new Set(),lines=new Set();let opc=false;
- IT().forEach(it=>{if(it.k==='sym'&&SYMS[it.s]&&SYMS[it.s].legend!==false)syms.add(it.s);if(it.k==='inst')insts.add(it.code||'PI');if(it.k==='line')lines.add(it.style||'pipe');if(it.k==='opc')opc=true});
+ const syms=new Set(),insts=new Set(),lines=new Set(),ivars=new Set();let opc=false;
+ IT().forEach(it=>{if(it.k==='sym'&&SYMS[it.s]&&SYMS[it.s].legend!==false)syms.add(it.s);if(it.k==='inst'){insts.add(it.code||'PI');const sh=it.shape||'circle',lc=locOf(it);if(sh!=='circle'||lc!=='field')ivars.add(sh+'|'+lc)}if(it.k==='line')lines.add(it.style||'pipe');if(it.k==='opc')opc=true});
  const e=[];
  Object.keys(INST).forEach(k=>insts.has(k)&&e.push({inst:k,n:INST[k]}));
  [...insts].filter(k=>!INST[k]).sort().forEach(k=>e.push({inst:k,n:k}));
+ [...ivars].sort().forEach(v=>{const [sh,lc]=v.split('|');e.push({ivar:v,n:ISHN[sh]+(lc!=='field'?', '+ILOCN[lc]:'')})});
  Object.keys(SYMS).forEach(k=>syms.has(k)&&e.push({sym:k,n:SYMS[k].n}));
  if(opc)e.push({opc:true,n:'Off-page connector'});
  Object.keys(LS).forEach(k=>lines.has(k)&&k!=='pipe'&&e.push({line:k,n:LS[k].n}));
@@ -722,14 +883,14 @@ function primsToSvg(ps){
 
 /* ---------------- state ---------------- */
 let file={path:null,sha:null,dirty:false};
-let sel=new Set(),selBlock=null,tool='select',toolArg=null,draft=null,drag=null,spaceDown=false;
+let instPreset=null,sel=new Set(),selBlock=null,tool='select',toolArg=null,draft=null,drag=null,spaceDown=false,instDraft=null;
 let view={x:0,y:0,w:1189,h:841};
 let undoS=[],redoS=[],clip=null,tab='props';
 const svg=$('#svg');
 const byId=id=>IT().find(i=>i.id===id);
 const opt={snap:true,ortho:true,grid:true,tips:lsGet('pid.tips')!=='0'};
 
-function newDoc(company){return {meta:{title:'P&ID',client:'',location:'',projectNo:'',drawingNo:'',drawnBy:'',date:today(),rev:'0',revDate:today(),scale:'NTS',format:'A0',symScale:1,textScale:100,labelGap:0,showLegend:true,showNozzles:true,nozzlesAll:false,lineFmt:'{size}-{medium}-{no}-{spec}'},company:company?JSON.parse(JSON.stringify(company)):{name:'',address:'',contact:'',file:''},revisions:[{rev:'0',date:today(),desc:'Design.'}],nozzles:[],specs:[],notes:'',sheets:[{id:uid(),name:'Sheet 1',items:[],pos:{}}]}}
+function newDoc(company){return {meta:{title:'P&ID',client:'',location:'',projectNo:'',drawingNo:'',drawnBy:'',date:today(),rev:'0',revDate:today(),scale:'NTS',format:'A0',symScale:1,textScale:100,labelGap:0,showLegend:true,showNozzles:true,nozzlesAll:false,lineFmt:'{size}-{medium}-{no}-{spec}',orient:'landscape'},company:company?JSON.parse(JSON.stringify(company)):{name:'',address:'',contact:'',file:''},revisions:[{rev:'0',date:today(),desc:'Design.'}],nozzles:[],specs:[],notes:'',sheets:[{id:uid(),name:'Sheet 1',items:[],pos:{}}]}}
 function normalize(d){
  const n=newDoc();
  let co=d.company;if(!co&&d.meta&&d.meta.company!==undefined)co=typeof d.meta.company==='object'?d.meta.company:{name:d.meta.company};
@@ -762,6 +923,7 @@ function renderItems(){
  $('#gItems').innerHTML=sortedItems().map(it=>{
   const pr=itemPrims(it);let hit;
   if(it.k==='line')hit=`<polyline class="hit" points="${it.pts.map(p=>p.join(',')).join(' ')}" stroke-width="3"/>`;
+  else if(it.k==='inst'){const r=instR(it),lp=instLinkPts(it);hit=`<rect class="hit" x="${it.x-r-.5}" y="${it.y-r-.5}" width="${2*r+1}" height="${2*r+1}"/>`+(lp?`<polyline class="hit" points="${lp.map(p=>p.join(',')).join(' ')}" stroke-width="2.5"/>`:'')}
   else{const b=bboxOf(pr);hit=`<rect class="hit" x="${b.x-1}" y="${b.y-1}" width="${b.w+2}" height="${b.h+2}"/>`}
   if(it.k==='rect')hit=`<polyline class="hit" points="${it.x},${it.y} ${it.x+it.w},${it.y} ${it.x+it.w},${it.y+it.h} ${it.x},${it.y+it.h} ${it.x},${it.y}" stroke-width="3"/>`+(it.label?(()=>{const b=bboxOf(pr.filter(p=>p.lbl));return `<rect class="hit" x="${b.x-1}" y="${b.y-1}" width="${b.w+2}" height="${b.h+2}"/>`})():'');
   const warn=it.k==='opc'&&!opcPartner(it);
@@ -774,6 +936,7 @@ function renderSel(){
  const g=$('#gSel');let h='';const k=px();
  if(selBlock&&frameBlocks[selBlock]){const b=frameBlocks[selBlock];h+=`<rect class="box" x="${b.x-1.5}" y="${b.y-1.5}" width="${b.w+3}" height="${b.h+3}" stroke-width="${k*1.5}"/>`}
  sel.forEach(id=>{const it=byId(id);if(!it)return;const b=bboxOf(itemPrims(it));h+=`<rect class="box" x="${b.x-1.5}" y="${b.y-1.5}" width="${b.w+3}" height="${b.h+3}" stroke-width="${k}"/>`});
+ if(sel.size>1){const b=bboxOf([...sel].map(byId).filter(Boolean).flatMap(itemPrims));h+=`<rect class="box" x="${b.x-4}" y="${b.y-4}" width="${b.w+8}" height="${b.h+8}" stroke-width="${2*k}" style="stroke-dasharray:none;opacity:.6"/>`}
  if(sel.size===1){const it=byId([...sel][0]);
   if(it){const lp=itemPrims(it).filter(p=>p.lbl);if(lp.length){const b=bboxOf(lp),hx=b.x-5*k,hy=b.y+b.h/2;h+=`<rect class="lh" data-id="${it.id}" data-lbl="1" x="${hx-3.5*k}" y="${hy-3.5*k}" width="${7*k}" height="${7*k}" transform="rotate(45 ${hx} ${hy})" stroke-width="${k}"/>`}}
   if(it&&it.k==='line'){
@@ -781,6 +944,7 @@ function renderSel(){
     if(len>12*k&&(isHor(A,B)||isVer(A,B)))h+=`<circle class="sh" data-id="${it.id}" data-seg="${i}" cx="${(A[0]+B[0])/2}" cy="${(A[1]+B[1])/2}" r="${4.5*k}" stroke-width="${k}" style="cursor:${isHor(A,B)?'ns-resize':'ew-resize'}"/>`}
    it.pts.forEach((p,i)=>{h+=`<rect class="vh" data-id="${it.id}" data-vi="${i}" x="${p[0]-4*k}" y="${p[1]-4*k}" width="${8*k}" height="${8*k}" stroke-width="${k}"/>`});
   }
+  if(it&&it.k==='inst'&&it.link)h+=`<rect class="vh" data-id="${it.id}" data-link="1" x="${it.link.x-4*k}" y="${it.link.y-4*k}" width="${8*k}" height="${8*k}" stroke-width="${k}"/>`;
   if(it&&it.k==='rect')h+=`<rect class="vh" data-id="${it.id}" data-rs="1" x="${it.x+it.w-4*k}" y="${it.y+it.h-4*k}" width="${8*k}" height="${8*k}" stroke-width="${k}"/>`;
  }
  g.innerHTML=h;
@@ -813,19 +977,20 @@ $('#sheetbar').addEventListener('dblclick',e=>{const b=e.target.closest('[data-s
 const TOOLS=[
  {id:'select',n:'Select',k:'V',tip:'Click to select, <kbd>Shift</kbd>+click to add, drag to move. On a selected line: round handles move a segment, square handles move a corner. The orange diamond moves the text. Click a table (legend, title block…) to move it.',i:'<path d="M4 2l9 6-4 1 3 5-2 1-3-5-3 3z"/>'},
  {id:'pan',n:'Pan',k:'H',tip:'Drag to move the view. Also: hold <kbd>Space</kbd> or the middle mouse button. Scroll to zoom.',i:'<path d="M8 1v14M1 8h14M8 1l-2 2M8 1l2 2M8 15l-2-2M8 15l2-2M1 8l2-2M1 8l2 2M15 8l-2-2M15 8l-2 2"/>'},
- {id:'line',arg:'pipe',n:'Pipe',k:'P',tip:'Click the points of the pipe; double-click, <kbd>Enter</kbd> or right-click to finish. Give it line data (line no., size, medium, pipe class) in Properties – it appears in the line list.',i:'<path d="M1 12h7V4h7" stroke-width="2"/>'},
+ {id:'line',arg:'pipe',n:'Pipe',k:'P',tip:'Click the points of the pipe; double-click, <kbd>Enter</kbd> or right-click to finish. Start on the end of an existing pipe to continue that pipe (hold <kbd>Alt</kbd> for a separate line). Give it line data (line no., size, medium, pipe class) in Properties – it appears in the line list.',i:'<path d="M1 12h7V4h7" stroke-width="2"/>'},
  {id:'line',arg:'small',n:'Small',k:'',tip:'Small bore / drain / instrument line. Same line data as a pipe.',i:'<path d="M1 12h7V4h7"/>'},
  {id:'line',arg:'signal',n:'Signal',k:'L',tip:'Dashed signal line for instruments and controls.',i:'<path d="M1 8h14" stroke-dasharray="2 1.5"/>'},
  {id:'line',arg:'elec',n:'Electric',k:'E',tip:'Dash-dot line for power supply and cabling.',i:'<path d="M1 8h14" stroke-dasharray="4 1.2 1 1.2"/>'},
- {id:'inst',n:'Instrument',k:'I',tip:'Instrument bubble with code (PI, PS, PT, LS…) and tag number. Tick "panel mounted" for a line through the bubble.',i:'<circle cx="8" cy="8" r="6"/><path d="M2 8h12"/>'},
+ {id:'inst',n:'Instrument',k:'I',tip:'Click on a pipe, line or object first: the instrument gets its own connection line (not in the line list). Then click where the bubble goes. Click on empty space for a bubble without a connection.',i:'<circle cx="8" cy="8" r="6"/><path d="M2 8h12"/>'},
  {id:'opc',n:'Off-page',k:'O',tip:'Off-page connector: continues a line on another sheet. Click on the end of a line to attach it. Same number = same connection; the sheet reference and line number are filled in automatically.',i:'<path d="M1 4h10l4 4-4 4H1z"/>'},
  {id:'text',n:'Text',k:'T',tip:'Free text. Tick "Frame" for alarm or signal tags such as LS-01011.',i:'<path d="M3 3h10M8 3v11"/>'},
  {id:'rect',arg:'solid',n:'Box',k:'Q',tip:'Box for equipment, panels, tanks and controllers. Drag to draw.',i:'<rect x="2" y="3" width="12" height="10"/>'},
  {id:'rect',arg:'dashed',n:'Boundary',k:'B',tip:'Dashed scope boundary, e.g. PUMPROOM.',i:'<rect x="2" y="3" width="12" height="10" stroke-dasharray="2.5 1.5"/>'},
 ];
-const HINTS={select:'Click to select · drag to move · round handle = move segment · ◆ = move text · R rotate · F mirror · Del delete · Ctrl+F search',pan:'Drag to pan · scroll to zoom',line:'Click points · Shift = free angle · double-click / Enter / right-click to finish · Esc cancel',inst:'Click to place an instrument',text:'Click to place text',rect:'Drag to draw a box',sym:'Click to place · snaps onto pipes and turns with the pipe · Esc to stop',opc:'Click on the end of a line to attach an off-page connector'};
+const HINTS={select:'Click to select · Shift/Ctrl+click add · box-drag to select several · Ctrl+G group · double-click a line = add bend · round handle = move segment · ◆ = move text · R rotate · F mirror · Del delete · Ctrl+F search',pan:'Drag to pan · scroll to zoom',line:'Click points · Shift = free angle · double-click / Enter / right-click to finish · Esc cancel',inst:'Click a pipe/object for the connection point (or empty space for a loose bubble)',pick:'Click the point on a pipe or object to connect the instrument to · Esc to cancel',text:'Click to place text',rect:'Drag to draw a box',sym:'Click to place · snaps onto pipes and turns with the pipe · Esc to stop',opc:'Click on the end of a line to attach an off-page connector'};
 function setTool(t,arg=null){
  if(draft&&!(t==='line'&&tool==='line'))finishDraft();
+ instDraft=null;if(t!=='line')$('#gDraft').innerHTML='';
  tool=t;toolArg=arg;
  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',b.dataset.t===t&&(t==='inst'||(b.dataset.a||null)===(arg||null))));
  document.querySelectorAll('.sym').forEach(b=>b.classList.toggle('on',t==='sym'&&b.dataset.s===arg));
@@ -836,11 +1001,12 @@ function setTool(t,arg=null){
 }
 function buildTools(){
  $('#tools').innerHTML=TOOLS.map(t=>`<button class="tool" data-t="${t.id}"${t.arg?` data-a="${t.arg}"`:''} data-tip="<b>${t.n}</b>${t.k?` <kbd>${t.k}</kbd>`:''}<br>${esc(t.tip)}"><svg viewBox="0 0 16 16">${t.i}</svg>${t.n}${t.k?`<kbd>${t.k}</kbd>`:''}</button>`).join('');
- $('#tools').onclick=e=>{const b=e.target.closest('.tool');if(b)setTool(b.dataset.t,b.dataset.a||null)};
+ $('#tools').onclick=e=>{const b=e.target.closest('.tool');if(b){instPreset=null;setTool(b.dataset.t,b.dataset.a||null)}};
  renderSearch('');
  $('#symsearch').oninput=e=>renderSearch(e.target.value);
  $('#symsearch').onkeydown=e=>{if(e.key==='Enter'&&lastHits.length){pickHit(lastHits[0]);e.target.blur()}if(e.key==='Escape'){e.target.value='';renderSearch('');e.target.blur()}};
  $('#symlist').onclick=e=>{
+  const iv=e.target.closest('[data-inst]');if(iv){const [sh,lc,c]=iv.dataset.inst.split('|');setTool('inst',c);instPreset={shape:sh,loc:lc};toast((ISHN[sh]||'Instrument')+' – click a pipe for a connection line, or empty space');return}
   const b=e.target.closest('.sym');if(b){setTool('sym',b.dataset.s);return}
   const r=e.target.closest('[data-pick]');if(r){pickHit(lastHits[+r.dataset.pick]);return}
   const g=e.target.closest('[data-goto]');if(g){const [si,id]=g.dataset.goto.split(':');goTo(+si,id)}
@@ -850,14 +1016,17 @@ function symThumb(k){const def=SYMS[k];const pr=xform(def.g({tag:'A'}),{x:0,y:0,
 function thumbSvg(pr){const b=bboxOf(pr),m=Math.max(b.w,b.h)/2+1.2,cx=b.x+b.w/2,cy=b.y+b.h/2;return `<svg viewBox="${cx-m} ${cy-m} ${2*m} ${2*m}" stroke-linecap="round" stroke-linejoin="round">${primsToSvg(pr)}</svg>`}
 function iconFor(h){
  if(h.type==='sym')return symThumb(h.key);
- if(h.type==='inst')return thumbSvg([C(0,0,3,2,{w:.25}),T(0,0,h.key,h.key.length>2?1.5:1.8)]);
+ if(h.type==='inst')return h.shape?instThumb(h.shape,h.loc,h.key):thumbSvg([C(0,0,3,2,{w:.25}),T(0,0,h.key,h.key.length>2?1.5:1.8)]);
  if(h.type==='line'){const st=LS[h.key];return thumbSvg([L(-5,0,5,0,{w:st.w*1.6,dash:st.dash})])}
  if(h.type==='opc')return thumbSvg(xform([P([[-5,-2.5],[2.5,-2.5],[5,0],[2.5,2.5],[-5,2.5]]),T(-1.2,0,'1',2.2)],{x:0,y:0,rot:0,s:1},'S'));
  return '';
 }
+const IVARS=[['circle','field','PI'],['circle','main','PI'],['circle','aux','PI'],['circle','hidden','PI'],['shared','main','PI'],['plc','main','PI'],['computer','main','PI'],['half','field','PI'],['transducer','field','I/P']];
+const instThumb=(sh,lc,c)=>thumbSvg(itemPrims({k:'inst',code:c,num:lc!=='field'?'01':'',shape:sh,loc:lc,x:0,y:0}));
 function buildSymGrid(){
+ const instHtml=`<div class="symcat">Instruments</div><div class="symgrid">${IVARS.map(([sh,lc,c])=>`<button class="sym" data-inst="${sh}|${lc}|${c}" data-tip="<b>${esc(ISHAPE[sh])}</b><br>${esc(ILOC[lc])}<br>Click a pipe first for a connection line, then where the bubble goes.">${instThumb(sh,lc,c)}</button>`).join('')}</div>`;
  const cats={};Object.entries(SYMS).forEach(([k,d])=>(cats[d.c]=cats[d.c]||[]).push(k));
- $('#symlist').innerHTML=Object.entries(cats).map(([c,ks])=>`<div class="symcat">${c}</div><div class="symgrid">${ks.map(k=>`<button class="sym${tool==='sym'&&toolArg===k?' on':''}" data-s="${k}" data-tip="<b>${esc(SYMS[k].n)}</b>${SYMS[k].note?'<br>'+esc(SYMS[k].note):''}">${symThumb(k)}</button>`).join('')}</div>`).join('');
+ $('#symlist').innerHTML=Object.entries(cats).map(([c,ks])=>`<div class="symcat">${c}</div><div class="symgrid">${ks.map(k=>`<button class="sym${tool==='sym'&&toolArg===k?' on':''}" data-s="${k}" data-tip="<b>${esc(SYMS[k].n)}</b>${SYMS[k].note?'<br>'+esc(SYMS[k].note):''}">${symThumb(k)}</button>`).join('')}</div>`).join('').replace('<div class="symcat">Fittings</div>',instHtml+'<div class="symcat">Fittings</div>');
 }
 
 /* ---------------- search ---------------- */
@@ -866,6 +1035,14 @@ const CATALOG=()=>[
  ...Object.entries(SYMS).map(([k,d])=>({type:'sym',key:k,n:d.n,kw:d.k||'',cat:d.c,note:d.note})),
  ...Object.entries(INST).map(([k,n])=>({type:'inst',key:k,n:`${n} (${k})`,kw:`${INSTK[k]||''} instrument ${k}`,cat:'Instrument',note:`Instrument bubble with code ${k}. Add the tag number in Properties.`})),
  ...Object.entries(LS).map(([k,d])=>({type:'line',key:k,n:d.n,kw:d.k||'',cat:'Line',note:'Line type. Draw with click-click, finish with a double-click.'})),
+ {type:'inst',key:'PI',shape:'circle',loc:'main',n:'Instrument, main panel (single line)',kw:'panel mounted control room paneel meldpaneel bedieningspaneel single line enkele lijn',cat:'Instrument shape',note:'Bubble with one horizontal line: mounted in the main panel / control room.'},
+ {type:'inst',key:'PI',shape:'circle',loc:'aux',n:'Instrument, local panel (double line)',kw:'local panel lokaal paneel double line dubbele lijn auxiliary',cat:'Instrument shape',note:'Bubble with two lines: mounted in a local panel.'},
+ {type:'inst',key:'PI',shape:'circle',loc:'hidden',n:'Instrument behind panel (dashed line)',kw:'behind panel achter paneel not accessible niet bereikbaar dashed gestreept',cat:'Instrument shape',note:'Dashed line: behind the panel, not accessible for the operator.'},
+ {type:'inst',key:'PI',shape:'shared',loc:'main',n:'Shared display / DCS',kw:'shared display dcs scada gedeeld beeldscherm besturingssysteem control system hmi',cat:'Instrument shape',note:'Square with circle: function on a shared display / control system.'},
+ {type:'inst',key:'PI',shape:'plc',loc:'main',n:'PLC / programmable function',kw:'plc programmable logic controller programmable indicator besturing logica',cat:'Instrument shape',note:'Square with diamond: function in a PLC.'},
+ {type:'inst',key:'PI',shape:'computer',loc:'main',n:'Computer function',kw:'computer function software calculation berekening octagon',cat:'Instrument shape',note:'Octagon: computer function.'},
+ {type:'inst',key:'PI',shape:'half',loc:'field',n:'Dome indicator (half circle)',kw:'half circle halve cirkel dome indicator',cat:'Instrument shape',note:'Half circle bubble.'},
+ {type:'inst',key:'I/P',shape:'transducer',loc:'field',n:'Transducer / converter (I/P)',kw:'transducer converter omvormer i/p positioner signaalomvormer',cat:'Instrument shape',note:'Circle with diagonal. Type the code as input/output, e.g. I/P.'},
  {type:'opc',key:'opc',n:'Off-page connector',kw:'off-page offpage connector continuation sheet page vervolg blad pagina koppeling link doorverwijzing',cat:'Connection',note:'Continues a line on another sheet. Use the same number on both sheets.'},
 ];
 function scoreHit(c,toks){
@@ -905,7 +1082,7 @@ function renderSearch(q){
  if(!h)h='<p class="hint">No match. Try another word in English or Dutch, e.g. "magneetventiel", "pressure switch", "terugslag", "vlotter".</p>';
  $('#symlist').innerHTML=h;
 }
-function pickHit(h){if(!h)return;if(h.type==='sym')setTool('sym',h.key);else if(h.type==='inst')setTool('inst',h.key);else if(h.type==='line')setTool('line',h.key);else if(h.type==='opc')setTool('opc');toast(h.n+' – click on the sheet to place')}
+function pickHit(h){if(!h)return;if(h.type==='sym')setTool('sym',h.key);else if(h.type==='inst'){setTool('inst',h.key);instPreset=h.shape?{shape:h.shape,loc:h.loc}:null}else if(h.type==='line')setTool('line',h.key);else if(h.type==='opc')setTool('opc');toast(h.n+' – click on the sheet to place')}
 function goTo(si,id){if(si!==cs){cs=si;sel.clear();draft=null}selBlock=null;sel=new Set([id]);renderAll();const it=byId(id);if(it)zoomTo(it);tab='props';renderPane();if(innerWidth<=900)$('#left').classList.remove('open')}
 
 /* ---------------- tooltips ---------------- */
@@ -921,7 +1098,7 @@ document.addEventListener('pointerdown',hideTip,true);
 function itemTip(it){
  const att=it.attached?'<br>🔗 Attached – lines move with it':'';
  if(it.k==='sym'){const d=SYMS[it.s];return `<b>${esc(d.n)}</b>${it.tag?'<br>Tag: '+esc(it.tag):''}${att}`}
- if(it.k==='inst')return `<b>${esc(INST[it.code]||it.code)}</b><br>${esc(it.code||'')}${it.num?'-'+esc(it.num):''}${it.panel?' · panel mounted':''}${att}`;
+ if(it.k==='inst')return `<b>${esc(INST[it.code]||it.code)}</b><br>${esc(it.code||'')}${it.num?'-'+esc(it.num):''}<br>${esc(ISHN[it.shape||'circle'])}, ${esc(ILOCN[locOf(it)])}${it.link?' · connection line':''}${att}`;
  if(it.k==='line'){const sp=D.specs.find(s=>s.code===it.spec);const rows=[['Line',lineDesig(it)],['Pipe class',it.spec?(it.spec+(sp?' – '+[sp.desc,sp.rating,sp.material].filter(Boolean).join(', '):'')):''],['From',it.from],['To',it.to],['Design',[it.dp&&it.dp+' bar',it.dt&&it.dt+' °C'].filter(Boolean).join(' / ')]].filter(r=>r[1]);
   return `<b>${esc(LS[it.style||'pipe'].n)}</b>${rows.map(r=>`<br>${r[0]}: ${esc(r[1])}`).join('')}${!rows.length&&PROCESS.has(it.style||'pipe')?'<br><i>No line data yet</i>':''}`}
  if(it.k==='opc'){const {lines,pr}=opcTexts(it);return `<b>Off-page connector ${esc(it.ref||'?')}</b><br>${esc(lines.join(' · '))}${pr?`<br>Continues on sheet ${pr.sheet+1}: ${esc(D.sheets[pr.sheet].name)}`:'<br>⚠ No matching connector on another sheet'}${att}`}
@@ -960,8 +1137,8 @@ function textFields(it,label='Text'){
   +`<div class="row"><button class="btn sm" data-act="resettext">Reset text position &amp; size</button></div>`;
 }
 function attachField(it){
- const n=attachCount(it);
- return `<label class="f" data-tip="When attached, lines that end on this object (or run through it) move along when you move it. Only possible while a line touches the object."><span>Attached</span><span style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="attached" ${it.attached?'checked':''} ${!n&&!it.attached?'disabled':''}><span class="hint">${n?`${n} line connection${n>1?'s':''}`:'not touching a line'}</span></span></label>`;
+ const n=attachCount(it),tp=it.k==='line'?'When attached, lines connected to this line follow it, and its own ends stay on the pipe or object they connect to. Only possible while it touches another line or object.':'When attached, lines that end on this object (or run through it) move along when you move it. Only possible while a line touches the object.';
+ return `<label class="f" data-tip="${tp}"><span>Attached</span><span style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="attached" ${it.attached?'checked':''} ${!n&&!it.attached?'disabled':''}><span class="hint">${n?`${n} line connection${n>1?'s':''}`:'not touching a line'}</span></span></label>`;
 }
 function renderPane(){
  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
@@ -973,33 +1150,38 @@ function renderPane(){
    +`<div class="f"><span>Shift X / Y</span><div class="two"><input type="number" step="2.5" data-f="bx" value="${o[0]}"><input type="number" step="2.5" data-f="by" value="${o[1]}"></div></div>`
    +`<div class="row"><button class="btn sm" data-act="blkreset">Reset position</button><button class="btn sm" data-act="blkall" data-tip="Use this position on every sheet">Apply to all sheets</button></div>`
    +(selBlock==='title'?'<p class="hint">The revision and nozzle tables follow the title block unless you move them separately.</p>':'');return}
- if(!sel.size){p.innerHTML=`<p class="hint">Nothing selected.</p><p class="hint">Pick a tool or search for a symbol on the left. Symbols snap onto pipes and cut the pipe where they sit, also in the PDF and DXF. Hover over anything for a tip.</p><p class="hint"><b>Lines:</b> select a line, then drag a round handle to move that segment. Connected lines only stretch horizontally or vertically.</p><p class="hint"><b>Attach:</b> tick "Attached" on an object that touches a line, and its lines move with it.</p><p class="hint"><b>Tables:</b> click the title block, legend, revision, nozzle or notes table and drag it.</p><p class="hint"><b>Multiple sheets:</b> ＋ at the bottom; continue a line with the off-page connector (O).</p><p class="hint"><b>Keys:</b> V select · P pipe · L signal · E electric · I instrument · O off-page · T text · Q box · B boundary · R rotate · F mirror · Ctrl+F search · Ctrl+Z / Ctrl+Y · Ctrl+D duplicate · Ctrl+S save</p>`;return}
+ if(!sel.size){p.innerHTML=`<p class="hint">Nothing selected.</p><p class="hint">Pick a tool or search for a symbol on the left. Symbols snap onto pipes and cut the pipe where they sit, also in the PDF and DXF. Hover over anything for a tip.</p><p class="hint"><b>Lines:</b> select a line, then drag a round handle to move that segment, or a square handle to move a corner. Connected lines only stretch horizontally or vertically. Double-click a line to add bends; start the Pipe tool on a line end to draw on from there.</p><p class="hint"><b>Attach:</b> tick "Attached" on an object or line that touches another line (a line end anywhere inside an object's frame counts as connected), and the connected lines move with it. Lines that meet end-to-end can be joined into one.</p><p class="hint"><b>Select several:</b> drag a box (left→right = fully inside, right→left = touching) or Shift/Ctrl+click. Drag any of them to move all. Ctrl+G groups them.</p><p class="hint"><b>Instruments:</b> with the Instrument tool, click the pipe first, then where the bubble goes – the connection line belongs to the instrument and stays out of the line list.</p><p class="hint"><b>Tables:</b> click the title block, legend, revision, nozzle or notes table and drag it.</p><p class="hint"><b>Multiple sheets:</b> ＋ at the bottom; continue a line with the off-page connector (O).</p><p class="hint"><b>Keys:</b> V select · P pipe · L signal · E electric · I instrument · O off-page · T text · Q box · B boundary · R rotate · F mirror · Ctrl+F search · Ctrl+Z / Ctrl+Y · Ctrl+D duplicate · Ctrl+S save</p>`;return}
  const items=[...sel].map(byId).filter(Boolean);
  if(items.length>1){
   const allLines=items.every(i=>i.k==='line');
-  p.innerHTML=`<p><b>${items.length} items selected</b></p><div class="row"><button class="btn sm" data-act="rot">Rotate 90°</button><button class="btn sm" data-act="dup">Duplicate</button><button class="btn sm" data-act="del">Delete</button></div>`+(allLines?DL()+lineDataFields(items)+'<p class="hint">Changes apply to all selected lines. Fields marked (mixed) are left as they are.</p>':'');return}
+  const grouped=items.some(i=>i.g),oneGroup=grouped&&items.every(i=>i.g===items[0].g);
+  p.innerHTML=`<p><b>${items.length} items selected</b>${oneGroup?' · group':''}</p><p class="hint">Drag any of them, or use the arrow keys, to move them together. Attached lines follow.</p><div class="row"><button class="btn sm" data-act="group" data-tip="Keep these together: a click on any part selects the whole group <kbd>Ctrl+G</kbd>">Group</button>${grouped?'<button class="btn sm" data-act="ungroup" data-tip="<kbd>Ctrl+Shift+G</kbd>">Ungroup</button>':''}<button class="btn sm" data-act="rot">Rotate 90°</button><button class="btn sm" data-act="dup">Duplicate</button><button class="btn sm" data-act="del">Delete</button></div>`+(allLines?DL()+lineDataFields(items)+'<p class="hint">Changes apply to all selected lines. Fields marked (mixed) are left as they are.</p>':'');return}
  const it=items[0];if(!it){sel.clear();return renderPane()}
  let h=DL();
  if(it.k==='sym'){
   h+=`<h4>Symbol</h4>`+sfld('Type','s',it.s,Object.fromEntries(Object.entries(SYMS).map(([k,d])=>[k,d.n])))+fld(it.s==='nozzle'?'Letter':'Tag','tag',it.tag||'','text','',it.s==='nozzle'?'Letter from the piping interfaces table':'Tag number shown next to the symbol, e.g. V-101');
   if(it.s!=='nozzle')h+=sfld('Tag position','tagPos',it.tagPos||'above',{above:'Above',below:'Below',left:'Left',right:'Right'});
-  h+=sfld('Rotation','rot',it.rot||0,{0:'0°',90:'90°',180:'180°',270:'270°'},'Shortcut: R')+fld('Mirror','flip',it.flip,'checkbox','','Shortcut: F')+attachField(it);
+  h+=sfld('Rotation','rot',it.rot||0,{0:'0°',90:'90°',180:'180°',270:'270°'},'Shortcut: R')+fld('Mirror','flip',it.flip,'checkbox','','Shortcut: F')
+   +fld('Size (%)','sz',it.sz??'','number','min="30" max="600" step="10" placeholder="100"','Size of this symbol, e.g. 200 for a bigger motor or tank')+attachField(it);
   if(SYMS[it.s].note)h+=`<p class="hint">${esc(SYMS[it.s].note)}</p>`;
   if(it.tag&&it.s!=='nozzle')h+=textFields(it,'Tag text');
  }else if(it.k==='inst'){
   h+=`<h4>Instrument</h4><label class="f" data-tip="Instrument code, e.g. PI, PS, PT, LS. Custom codes are allowed and appear in the legend as typed."><span>Code</span><input data-f="code" list="instcodes" autocomplete="off" value="${esc(it.code||'')}"></label>`
-   +fld('Number','num',it.num||'')+fld('Panel mounted','panel',it.panel,'checkbox','','Draws a line through the bubble')+attachField(it)
-   +fld('Text size (%)','ts',it.ts??'','number','min="30" max="400" step="10" placeholder="100"')+`<p class="hint">${esc(INST[it.code]||'Custom code – shown in the legend as typed.')}</p>`;
+   +fld('Number','num',it.num||'')+sfld('Shape','shape',it.shape||'circle',ISHAPE,'ISA symbol shape')+sfld('Location','loc',locOf(it),ILOC,'Line(s) through the bubble show where the instrument is mounted')+((it.shape==='transducer')?'<p class="hint">Type the code as input/output, e.g. I/P – it is placed on both sides of the diagonal.</p>':'')+attachField(it)
+   +fld('Text size (%)','ts',it.ts??'','number','min="30" max="400" step="10" placeholder="100"')+`<p class="hint">${esc(INST[it.code]||'Custom code – shown in the legend as typed.')}</p>`
+   +`<h4>Connection line</h4>`+sfld('Line','linkStyle',it.link?(it.linkStyle||'process'):'none',{none:'No connection line',...Object.fromEntries(Object.entries(LINKS).map(([k,v])=>[k,v.n]))},'The instrument\'s own line to a pipe or object. It is part of the instrument and does not appear in the line list.')
+   +(it.link?sfld('Route','linkDir',it.link.dir||'v',{v:'Vertical from the connection point first',h:'Horizontal from the connection point first'})+`<div class="row"><button class="btn sm" data-act="picklink">Pick connection point</button><button class="btn sm" data-act="unlink">Remove line</button></div><p class="hint">Drag the square handle to move the connection point. It stays on the pipe when you move the bubble, and follows the pipe when the pipe moves.</p>`:'<p class="hint">Choose a line type, then click the connection point on a pipe or object.</p>');
  }else if(it.k==='line'){
   const proc=PROCESS.has(it.style||'pipe');
   h+=`<h4>Line</h4>`+sfld('Style','style',it.style||'pipe',Object.fromEntries(Object.entries(LS).map(([k,v])=>[k,v.n])))
    +sfld('Label','labelMode',labelMode(it),{auto:'Line designation (auto)',custom:'Custom text',none:'No label'},'Auto builds the label from size, medium, line no. and pipe class (format in Project tab)');
   if(labelMode(it)==='custom')h+=fld('Label text','label',it.label||'');
   else if(labelMode(it)==='auto')h+=`<p class="hint">Shown as: <b id="desigPreview">${esc(lineDesig(it)||'(fill in line data)')}</b></p>`;
-  h+=fld('Label at (%)','labelAt',it.labelAt??'','number','min="0" max="100" step="5" placeholder="auto"','Position of the label along the longest segment. Empty = automatic, avoiding symbols.')+fld('Label other side','labelFlip',it.labelFlip,'checkbox')+fld('Arrow at end','arrowEnd',it.arrowEnd,'checkbox')+fld('Arrow at start','arrowStart',it.arrowStart,'checkbox');
+  h+=attachField(it)+fld('Label at (%)','labelAt',it.labelAt??'','number','min="0" max="100" step="5" placeholder="auto"','Position of the label along the longest segment. Empty = automatic, avoiding symbols.')+fld('Label other side','labelFlip',it.labelFlip,'checkbox')+fld('Arrow at end','arrowEnd',it.arrowEnd,'checkbox')+fld('Arrow at start','arrowStart',it.arrowStart,'checkbox');
   if(lineLabel(it))h+=textFields(it,'Label text');
-  if(proc)h+=lineDataFields([it]);
-  h+=`<p class="hint">${it.pts.length} points. Round handle: move a segment (connected lines stretch H/V). Square handle: move a corner, Alt+click removes it. Double-click the line to add a corner.</p><div class="row"><button class="btn sm" data-act="rev">Reverse direction</button></div>`;
+  if(proc)h+=fld('Not in line list','noList',it.noList,'checkbox','','For drain, vent or impulse lines that should not appear in the line list')+lineDataFields([it]);
+  const jc=joinCands(it);
+  h+=`<h4>Shape</h4><p class="hint">${it.pts.length} points. <b>Add bends:</b> double-click on the line, then drag the new round handle sideways. Or start the Pipe tool on an end of this line to draw on from there.<br><b>Round handle:</b> move a segment (connected lines stretch H/V). <b>Square handle:</b> move a corner; the line stays horizontal/vertical (hold Shift for free). Alt+click a square removes it.</p><div class="row"><button class="btn sm" data-act="rev">Reverse direction</button><button class="btn sm" data-act="simplify" data-tip="Remove points that are not real bends">Clean up points</button>${jc.map((c,i)=>`<button class="btn sm" data-act="join" data-i="${i}" data-tip="Merge with the line that meets this one at its ${c.j?'end':'start'}">Join with ${esc(lineLabel(c.o)||LS[c.o.style||'pipe'].n.toLowerCase())}</button>`).join('')}</div>`;
  }else if(it.k==='opc'){
   const {lines,pr}=opcTexts(it);
   h+=`<h4>Off-page connector</h4>`+fld('Number','ref',it.ref||'','text','','Connectors with the same number on different sheets belong together')
@@ -1022,12 +1204,14 @@ function renderPane(){
 }
 function renderProject(p){
  const m=D.meta,co=D.company||{};
+  const opts=(cur,list)=>list.map(([k,v])=>`<option value="${k}" ${String(cur||'')===k?'selected':''}>${v}</option>`).join('');
  let h=`<h4>Sheet ${cs+1} of ${D.sheets.length}</h4>`+fld('Sheet name','s.name',S().name,'text','','Shown in the title block and on the sheet tabs')
+  +`<div class="f" data-tip="Paper size and orientation of this sheet. 'Project' follows the size set under Drawing."><span>Sheet size</span><div class="two"><select data-f="s.format">${opts(S().format,[['','Project ('+(D.meta.format||'A0')+')'],...Object.keys(SHEETS).map(k=>[k,k])])}</select><select data-f="s.orient">${opts(S().orient,[['','Project ('+((D.meta.orient||'landscape')==='portrait'?'portrait':'landscape')+')'],['landscape','Landscape'],['portrait','Portrait']])}</select></div></div>`
   +`<div class="row"><button class="btn sm" data-act="addsheet">＋ Add</button><button class="btn sm" data-act="dupsheet">Duplicate</button><button class="btn sm" data-act="msl" data-tip="Move sheet left">◀</button><button class="btn sm" data-act="msr" data-tip="Move sheet right">▶</button><button class="btn sm" data-act="delsheet">Delete</button><button class="btn sm" data-act="resetpos" data-tip="Put all tables back in their standard place on this sheet">Reset tables</button></div>`;
  h+=`<h4>Company (title block)</h4>`+fld('Company','c.name',co.name||'')+fld('Address','c.address',co.address||'','textarea','rows="2" placeholder="Street, city"')+fld('Contact','c.contact',co.contact||'','text','placeholder="phone · e-mail · web"')
   +`<p class="hint">${co.file?`From format <b>${esc(co.file)}</b>. `:''}Choose a saved company format, or save these details as one.</p><div class="row"><button class="btn sm pri" data-act="fmtchoose">Choose format…</button><button class="btn sm" data-act="fmtsave">Save as format…</button></div>`;
  h+=`<h4>Drawing</h4>`+[['Title','title'],['Client','client'],['Location','location'],['Project no.','projectNo'],['Drawing no.','drawingNo'],['Drawn by','drawnBy'],['Date','date'],['Scale','scale']].map(([l,k])=>fld(l,'m.'+k,m[k]||'')).join('')
-  +sfld('Format','m.format',m.format,{A0:'A0 (1189×841)',A1:'A1 (841×594)',A2:'A2 (594×420)',A3:'A3 (420×297)'},'Same format for all sheets')
+  +`<div class="f" data-tip="Default paper size for all sheets. A sheet can have its own size (Sheet section above)."><span>Format</span><div class="two"><select data-f="m.format">${opts(m.format,Object.entries(SHEETS).map(([k,v])=>[k,`${k} (${v[0]}×${v[1]})`]))}</select><select data-f="m.orient">${opts(m.orient||'landscape',[['landscape','Landscape'],['portrait','Portrait']])}</select></div></div>`
   +fld('Symbol scale','m.symScale',m.symScale||1,'number','step="0.05" min="0.3" max="3"','Size of symbols. 1 suits A0.')
   +fld('Text size (%)','m.textScale',m.textScale||100,'number','step="10" min="30" max="400"','Size of all tags, line labels, connector and instrument texts. Each item can be adjusted further.')
   +fld('Label gap (mm)','m.labelGap',m.labelGap||0,'number','step="0.5" min="-5" max="20"','Extra distance between a line or symbol and its label')
@@ -1045,6 +1229,28 @@ function renderProject(p){
  h+=`<h4>General notes</h4><label class="f" style="grid-template-columns:1fr"><textarea data-f="notes" rows="4" placeholder="One note per line">${esc(D.notes||'')}</textarea></label>`;
  p.innerHTML=h;
 }
+function scaleSheet(sh,[W0,H0],[W1,H1]){
+ const k=Math.min((W1-20)/(W0-20),(H1-20)/(H0-20)),f=v=>10+(v-10)*k;
+ sh.items.forEach(it=>{
+  if(it.k==='line')it.pts=it.pts.map(p=>[f(p[0]),f(p[1])]);
+  else{it.x=f(it.x);it.y=f(it.y)}
+  if(it.k==='rect'){it.w*=k;it.h*=k}
+  if(it.link){it.link.x=f(it.link.x);it.link.y=f(it.link.y)}
+  if(it.tdx)it.tdx*=k;if(it.tdy)it.tdy*=k;
+ });
+ sh.pos={};
+}
+function changeSize(f,v){
+ const key=f.slice(2),proj=f[0]==='m';
+ const scope=proj?D.sheets.filter(s=>!s[key]):[S()];
+ const old=scope.map(dimsOf);
+ if(proj)D.meta[key]=v;else{if(v)S()[key]=v;else delete S()[key]}
+ const now=scope.map(dimsOf),chg=scope.map((s,i)=>old[i][0]!==now[i][0]||old[i][1]!==now[i][1]);
+ if(scope.some((s,i)=>chg[i]&&s.items.length)&&confirm('Scale the drawing to fit the new sheet size?\n\nOK = scale positions to the new size (check connections afterwards)\nCancel = keep positions as they are'))
+  scope.forEach((s,i)=>{if(chg[i]&&s.items.length)scaleSheet(s,old[i],now[i])});
+ scope.forEach((s,i)=>{if(chg[i])s.pos={}});
+ selBlock=null;renderAll();fit();
+}
 let editHist=false;
 $('#pane').addEventListener('focusin',()=>{editHist=true});
 function paneEdit(e){
@@ -1058,17 +1264,21 @@ function paneEdit(e){
  const f=t.dataset.f;if(!f)return;
  if(f==='bx'||f==='by'){S().pos=S().pos||{};const o=S().pos[selBlock]||[0,0];S().pos[selBlock]=f==='bx'?[+v||0,o[1]]:[o[0],+v||0];renderFrame();renderSel();return}
  if(f==='notes'){D.notes=v;renderFrame();return}
+ if(['s.format','s.orient','m.format','m.orient'].includes(f)){changeSize(f,v);return}
  if(f==='s.name'){S().name=v;renderFrame();renderSheetbar();return}
  if(f.startsWith('c.')){D.company[f.slice(2)]=v;renderFrame();return}
  if(f.startsWith('m.')){const k=f.slice(2);D.meta[k]=v;renderFrame();if(['symScale','lineFmt','textScale','labelGap'].includes(k))renderItems();if(k==='format'){renderItems();fit()}updTitle();return}
  const items=[...sel].map(byId).filter(Boolean);if(!items.length)return;
  for(const it of items){
   if(items.length>1&&it.k!=='line')continue;
+  if(f==='linkStyle'){if(v==='none'){delete it.link;delete it.linkStyle}else{it.linkStyle=v;if(!it.link){setTool('pick',it.id);toast('Click the connection point on a pipe or object')}}continue}
+  if(f==='linkDir'){if(it.link)it.link.dir=v;continue}
+  if(f==='loc'){it.loc=v;delete it.panel;continue}
   if(f==='hh')it.h=+v||1;else if(f==='rot')it.rot=+v;else if(f==='ang')it.ang=+v;else it[f]=v;
  }
  renderItems();renderFrame();
  if(['labelMode','style','s','dir','ref','tag','box','label'].includes(f)&&e.type==='change')renderPane();
- else if(['labelMode','style','s','dir'].includes(f))renderPane();
+ else if(['labelMode','style','s','dir','linkStyle','linkDir','shape','loc'].includes(f))renderPane();
  else if(items.length===1&&items[0].k==='line'&&['lineNo','size','medium','spec'].includes(f)){const hEl=$('#desigPreview');if(hEl)hEl.textContent=lineDesig(items[0])||'(fill in line data)'}
 }
 $('#pane').addEventListener('input',paneEdit);
@@ -1079,6 +1289,11 @@ $('#pane').addEventListener('click',e=>{
  if(a==='del')delSel();else if(a==='dup')dupSel();else if(a==='rot')rotSel();
  else if(a==='rev'){pushHist();it.pts.reverse();renderItems()}
  else if(a==='front'){pushHist();S().items=IT().filter(x=>x!==it).concat(it);renderItems()}
+ else if(a==='group')groupSel();else if(a==='ungroup')ungroupSel();
+ else if(a==='picklink'){setTool('pick',it.id);toast('Click the connection point on a pipe or object')}
+ else if(a==='unlink'){pushHist();delete it.link;delete it.linkStyle;renderItems();renderPane()}
+ else if(a==='simplify'){pushHist();simplifyLine(it);renderItems();renderPane()}
+ else if(a==='join'){const c=joinCands(it)[i];if(c){pushHist();joinLines(it,c);renderItems();renderFrame();renderPane();toast('Lines joined')}}
  else if(a==='resettext'){pushHist();delete it.tdx;delete it.tdy;delete it.ts;renderItems();renderPane()}
  else if(a==='nextno'){pushHist();let mx=0,w=3;D.sheets.forEach(s=>s.items.forEach(l=>{if(l.k==='line'&&l.lineNo){const n=parseInt(String(l.lineNo).replace(/\D/g,''),10);if(n>mx)mx=n;w=Math.max(w,String(l.lineNo).length)}}));it.lineNo=String(mx+1).padStart(Math.min(w,3),'0');renderItems();renderPane()}
  else if(a==='gopartner'){const pr=opcPartner(it);if(pr)goTo(pr.sheet,pr.item.id)}
@@ -1103,12 +1318,17 @@ document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');i
 /* ---------------- editing ops ---------------- */
 function addItem(it,select=true){pushHist();it.id=uid();IT().push(it);if(select){sel=new Set([it.id]);selBlock=null}renderItems();renderFrame();renderPane();renderSheetbar();return it}
 function delSel(){if(!sel.size)return;pushHist();S().items=IT().filter(i=>!sel.has(i.id));sel.clear();renderItems();renderFrame();renderPane();renderSheetbar()}
-function moveItem(it,dx,dy){if(it.k==='line')it.pts=it.pts.map(p=>[p[0]+dx,p[1]+dy]);else{it.x+=dx;it.y+=dy}}
-function dupSel(off=5){if(!sel.size)return;pushHist();const n=[];sel.forEach(id=>{const c=JSON.parse(JSON.stringify(byId(id)));c.id=uid();c.attached=false;moveItem(c,off,off);IT().push(c);n.push(c.id)});sel=new Set(n);renderItems();renderFrame();renderPane()}
+function moveItem(it,dx,dy,withLink){if(it.k==='line')it.pts=it.pts.map(p=>[p[0]+dx,p[1]+dy]);else{it.x+=dx;it.y+=dy;if(withLink&&it.link){it.link.x+=dx;it.link.y+=dy}}}
+const regroup=list=>{const m={};list.forEach(c=>{if(c.g)c.g=m[c.g]||(m[c.g]=uid())})};
+function groupOf(id){const it=byId(id);return it&&it.g?IT().filter(o=>o.g===it.g).map(o=>o.id):[id]}
+function expandGroups(){[...sel].forEach(id=>groupOf(id).forEach(x=>sel.add(x)))}
+function groupSel(){if(sel.size<2){toast('Select two or more items first');return}pushHist();const g=uid();sel.forEach(id=>{const it=byId(id);if(it)it.g=g});renderPane();toast('Grouped – click any part to select the whole group (Alt+click = single item)')}
+function ungroupSel(){if(!sel.size)return;pushHist();sel.forEach(id=>{const it=byId(id);if(it)delete it.g});renderPane();toast('Ungrouped')}
+function dupSel(off=5){if(!sel.size)return;pushHist();const n=[],cs_=[...sel].map(id=>JSON.parse(JSON.stringify(byId(id))));regroup(cs_);cs_.forEach(c=>{c.id=uid();c.attached=false;moveItem(c,off,off,true);IT().push(c);n.push(c.id)});sel=new Set(n);renderItems();renderFrame();renderPane()}
 function rotSel(){if(!sel.size)return;pushHist();sel.forEach(id=>{const it=byId(id);if(it.k==='sym'||it.k==='opc')it.rot=((it.rot||0)+90)%360;else if(it.k==='text')it.ang=it.ang?0:90});renderItems();renderPane()}
 function flipSel(){if(!sel.size)return;pushHist();sel.forEach(id=>{const it=byId(id);if(it.k==='sym')it.flip=!it.flip});renderItems();renderPane()}
 function copySel(){clip=[...sel].map(id=>JSON.parse(JSON.stringify(byId(id))));toast(clip.length+' copied')}
-function paste(){if(!clip)return;pushHist();const n=[];clip.forEach(c=>{const x=JSON.parse(JSON.stringify(c));x.id=uid();x.attached=false;moveItem(x,10,10);IT().push(x);n.push(x.id)});clip.forEach(c=>moveItem(c,10,10));sel=new Set(n);renderItems();renderFrame();renderPane();renderSheetbar()}
+function paste(){if(!clip)return;pushHist();const n=[],xs=clip.map(c=>JSON.parse(JSON.stringify(c)));regroup(xs);xs.forEach(x=>{x.id=uid();x.attached=false;moveItem(x,10,10,true);IT().push(x);n.push(x.id)});clip.forEach(c=>moveItem(c,10,10,true));sel=new Set(n);renderItems();renderFrame();renderPane();renderSheetbar()}
 
 /* ---------------- pointer interaction ---------------- */
 function toWorld(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return {x:q.x,y:q.y}}
@@ -1143,9 +1363,12 @@ function renderDraft(cur){
 }
 function finishDraft(){
  if(!draft)return;const pts=draft.pts.filter((p,i,a)=>!i||p[0]!==a[i-1][0]||p[1]!==a[i-1][1]);
- if(pts.length>1)addItem({k:'line',style:draft.style,pts},false);
+ if(pts.length>1){const l=draft.ext&&byId(draft.ext.id);
+  if(l){pushHist();const add=pts.slice(1);l.pts=draft.ext.end?l.pts.concat(add):add.reverse().concat(l.pts);simplifyLine(l);sel=new Set([l.id]);renderItems();renderFrame();renderPane()}
+  else addItem({k:'line',style:draft.style,pts},false)}
  draft=null;$('#gDraft').innerHTML='';$('#finish').style.display='none';
 }
+function renderInstDraft(sp){const t={k:'inst',code:instDraft.code,...(instPreset||{}),num:'',x:sp.x,y:sp.y,link:instDraft.link};$('#gDraft').innerHTML=primsToSvg(itemPrims(t))+showSnap(sp)}
 function placeOpc(sp){
  const s=ss();let rot=0,x=sp.x+5*s,y=sp.y;
  if(sp.line&&sp.end>=0){const pts=sp.line.pts,a=sp.end===1?pts[pts.length-2]:pts[1],b=sp.end===1?pts[pts.length-1]:pts[0];
@@ -1158,37 +1381,47 @@ svg.addEventListener('contextmenu',e=>e.preventDefault());
 svg.addEventListener('pointerdown',e=>{
  svg.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(pointers.size===2){const [a,b]=[...pointers.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),mx:(a.x+b.x)/2,my:(a.y+b.y)/2,v:{...view}};drag=null;return}
+ const now=performance.now(),dbl=e.button===0&&now-lastDown.t<450&&Math.hypot(e.clientX-lastDown.x,e.clientY-lastDown.y)<6;
+ lastDown=dbl?{t:0,x:0,y:0}:{t:now,x:e.clientX,y:e.clientY};
+ if(dbl&&!spaceDown&&tool!=='pan'&&handleDouble(e))return;
  const w=toWorld(e);
  if(e.button===1||tool==='pan'||spaceDown){drag={mode:'pan',sx:e.clientX,sy:e.clientY,v:{...view}};svg.style.cursor='grabbing';return}
  if(e.button===2){if(draft)finishDraft();return}
  if(tool==='select'){
-  const h=e.target.closest('[data-vi],[data-rs],[data-seg],[data-lbl]');
+  const h=e.target.closest('[data-vi],[data-rs],[data-seg],[data-lbl],[data-link]');
   if(h){const it=byId(h.dataset.id),before=snapState();
-   if(h.dataset.vi!==undefined){if(e.altKey&&it.pts.length>2){pushHist();it.pts.splice(+h.dataset.vi,1);renderItems();renderPane();return}drag={mode:'vertex',id:it.id,i:+h.dataset.vi,before};return}
+   if(h.dataset.vi!==undefined){if(e.altKey&&it.pts.length>2){pushHist();it.pts.splice(+h.dataset.vi,1);renderItems();renderPane();return}drag={mode:'vertex',id:it.id,i:+h.dataset.vi,orig:[...it.pts[+h.dataset.vi]],snap:JSON.stringify(IT()),before};return}
    if(h.dataset.rs){drag={mode:'resize',id:it.id,before};return}
    if(h.dataset.seg!==undefined){const i=+h.dataset.seg;drag={mode:'seg',id:it.id,i,hor:isHor(it.pts[i-1],it.pts[i]),start:w,snap:JSON.stringify(IT()),before};return}
+   if(h.dataset.link){drag={mode:'link',id:it.id,before};return}
    if(h.dataset.lbl){drag={mode:'label',id:it.id,start:w,o:[+it.tdx||0,+it.tdy||0],before};return}
   }
   const g=e.target.closest('[data-id]');
-  if(g){const id=g.dataset.id;selBlock=null;
-   if(e.shiftKey){sel.has(id)?sel.delete(id):sel.add(id)}else if(!sel.has(id))sel=new Set([id]);
+  if(g){const id=g.dataset.id;selBlock=null;const grp=e.altKey?[id]:groupOf(id),add=e.shiftKey||e.ctrlKey||e.metaKey;
+   if(add){if(sel.has(id)){grp.forEach(x=>sel.delete(x));renderItems();renderPane();return}grp.forEach(x=>sel.add(x))}else if(!sel.has(id))sel=new Set(grp);
    renderItems();renderPane();drag={mode:'move',start:w,dx:0,dy:0,snap:JSON.stringify(IT()),before:snapState()};return}
   const bk=e.target.closest('[data-block]');
   if(bk){selBlock=bk.dataset.block;sel.clear();tab='props';renderItems();renderPane();S().pos=S().pos||{};const o=S().pos[selBlock]||[0,0];drag={mode:'block',name:selBlock,start:w,o:[...o],before:snapState()};return}
   if(selBlock){selBlock=null;renderSel();renderPane()}
-  if(!e.shiftKey){sel.clear();renderItems();renderPane()}
+  if(!(e.shiftKey||e.ctrlKey||e.metaKey)){sel.clear();renderItems();renderPane()}
   drag={mode:'marq',start:w};return;
  }
  const sp=snapPt(w);
  if(tool==='line'){
-  if(!draft){draft={style:toolArg||'pipe',pts:[[sp.x,sp.y]]};$('#finish').style.display='inline-block'}
+  if(!draft){draft={style:toolArg||'pipe',pts:[[sp.x,sp.y]]};
+   if(sp.line&&sp.end>=0&&!e.altKey&&(sp.line.style||'pipe')===(toolArg||'pipe')){draft.ext={id:sp.line.id,end:sp.end};toast('Continuing '+(lineLabel(sp.line)||'this line')+' – hold Alt to start a separate line')}
+   $('#finish').style.display='inline-block'}
   else{const p=orthoPt(draft.pts[draft.pts.length-1],sp,e.shiftKey);draft.pts.push([p.x,p.y])}
   renderDraft(sp);return;
  }
  if(tool==='sym'){let rot=0;if(sp.dir!==undefined){rot=Math.round(((sp.dir*180/Math.PI)+360)%360/90)*90%360;if(rot===180)rot=0;if(rot===270&&!/check|flowarrow|nozzle/.test(toolArg))rot=90}
   const it={k:'sym',s:toolArg,x:sp.x,y:sp.y,rot};if(toolArg==='nozzle')it.tag=nextNozzle();addItem(it);return}
  if(tool==='opc'){placeOpc(sp);setTool('select');tab='props';renderPane();return}
- if(tool==='inst'){addItem({k:'inst',code:toolArg||'PI',num:'',x:sp.x,y:sp.y});setTool('select');tab='props';renderPane();focusField('num');return}
+ if(tool==='pick'){const it=byId(toolArg);if(it){pushHist();it.link={x:sp.x,y:sp.y,dir:linkDirAt(sp)};if(!it.linkStyle)it.linkStyle='process';sel=new Set([it.id])}setTool('select');renderItems();renderPane();return}
+ if(tool==='inst'){
+  if(instDraft){const it={k:'inst',code:instDraft.code,...(instPreset||{}),num:'',x:sp.x,y:sp.y,link:instDraft.link,linkStyle:'process'};if(Math.hypot(sp.x-it.link.x,sp.y-it.link.y)<1){delete it.link;delete it.linkStyle}instDraft=null;addItem(it);setTool('select');tab='props';renderPane();focusField('num');return}
+  if(sp.snap){instDraft={code:toolArg||'PI',link:{x:sp.x,y:sp.y,dir:linkDirAt(sp)}};$('#hint').textContent='Now click where the instrument bubble goes · Esc to cancel';renderInstDraft(sp);return}
+  addItem({k:'inst',code:toolArg||'PI',...(instPreset||{}),num:'',x:sp.x,y:sp.y});setTool('select');tab='props';renderPane();focusField('num');return}
  if(tool==='text'){addItem({k:'text',text:'TEXT',h:+(2.5*ss()).toFixed(2),align:'left',x:sp.x,y:sp.y});setTool('select');tab='props';renderPane();focusField('text');return}
  if(tool==='rect'){drag={mode:'rect',start:sp,cur:sp};return}
 });
@@ -1203,7 +1436,7 @@ svg.addEventListener('pointermove',e=>{
  if(!drag){
   if(tool==='select'&&opt.tips&&e.pointerType!=='touch'){const g=e.target.closest('[data-id]');const id=g&&!e.target.closest('#gSel')?g.dataset.id:null;
    if(id!==hoverId){hoverId=id;clearTimeout(tipT);tip.classList.remove('show');if(id){tipT=setTimeout(()=>{const it=byId(id);if(it&&hoverId===id)showTip(itemTip(it),e.clientX+14,e.clientY+16)},450)}}}
-  if(tool==='line'&&draft){const sp=snapPt(w);renderDraft(orthoPt(draft.pts[draft.pts.length-1],sp,e.shiftKey))}else if(['sym','inst','text','rect','line','opc'].includes(tool))renderDraft(snapPt(w));return}
+  if(tool==='line'&&draft){const sp=snapPt(w);renderDraft(orthoPt(draft.pts[draft.pts.length-1],sp,e.shiftKey))}else if(tool==='inst'&&instDraft)renderInstDraft(snapPt(w));else if(['sym','inst','text','rect','line','opc','pick'].includes(tool))renderDraft(snapPt(w));return}
  hideTip();
  const dX=w.x-(drag.start?.x??0),dY=w.y-(drag.start?.y??0);
  if(drag.mode==='pan'){const k=view.w/svg.clientWidth;view.x=drag.v.x-(e.clientX-drag.sx)*k;view.y=drag.v.y-(e.clientY-drag.sy)*k;setView();return}
@@ -1217,7 +1450,12 @@ svg.addEventListener('pointermove',e=>{
   S().items=JSON.parse(drag.snap);const l=byId(drag.id);moveSegment(l,drag.i,d,IT());renderItems();return}
  if(drag.mode==='label'){const it=byId(drag.id);it.tdx=Math.round((drag.o[0]+dX)*2)/2;it.tdy=Math.round((drag.o[1]+dY)*2)/2;drag.moved=true;renderItems();return}
  if(drag.mode==='block'){const nx=drag.o[0]+gr(dX),ny=drag.o[1]+gr(dY);S().pos[drag.name]=[nx,ny];drag.moved=true;renderFrame();renderSel();return}
- if(drag.mode==='vertex'){const it=byId(drag.id),sp=snapPt(w,new Set([drag.id]));it.pts[drag.i]=[sp.x,sp.y];drag.moved=true;renderItems();renderDraft(sp);return}
+ if(drag.mode==='vertex'){const sp=snapPt(w,new Set([drag.id]));S().items=JSON.parse(drag.snap);const it=byId(drag.id),n=it.pts.length;
+  if(!opt.ortho||e.shiftKey)it.pts[drag.i]=[sp.x,sp.y];
+  else if(drag.i===0||drag.i===n-1)moveLineEnd(it,drag.i?1:0,sp.x-drag.orig[0],sp.y-drag.orig[1]);
+  else moveVertexOrtho(it,drag.i,[sp.x,sp.y]);
+  drag.moved=true;renderItems();renderDraft(sp);return}
+ if(drag.mode==='link'){const it=byId(drag.id),sp=snapPt(w,new Set([drag.id]));it.link.x=sp.x;it.link.y=sp.y;if(sp.snap)it.link.dir=linkDirAt(sp);drag.moved=true;renderItems();renderDraft(sp);return}
  if(drag.mode==='resize'){const it=byId(drag.id),sp=snapPt(w);it.w=Math.max(GRID,sp.x-it.x);it.h=Math.max(GRID,sp.y-it.y);drag.moved=true;renderItems();return}
  if(drag.mode==='marq'||drag.mode==='rect'){
   const s=drag.start,c=drag.mode==='rect'?snapPt(w):w;drag.cur=c;const k=px();
@@ -1229,24 +1467,32 @@ svg.addEventListener('pointerup',e=>{
  if(!drag)return;const d=drag;drag=null;
  if(d.mode==='pan'){svg.style.cursor=tool==='pan'?'grab':'';return}
  if(d.mode==='move'||d.mode==='seg'){if(d.dx||d.dy||d.d)commit(d.before);renderItems();renderFrame();renderPane();renderSheetbar();return}
- if(['vertex','resize','label','block'].includes(d.mode)){$('#gDraft').innerHTML='';if(d.moved)commit(d.before);if(d.mode==='block'){renderPane();return}renderItems();renderFrame();renderPane();return}
+ if(['vertex','resize','label','block','link'].includes(d.mode)){$('#gDraft').innerHTML='';if(d.moved)commit(d.before);if(d.mode==='block'){renderPane();return}renderItems();renderFrame();renderPane();return}
  if(d.mode==='marq'){$('#gDraft').innerHTML='';const s=d.start,c=d.cur||s;if(Math.abs(c.x-s.x)<.5&&Math.abs(c.y-s.y)<.5)return;
   const x1=Math.min(s.x,c.x),x2=Math.max(s.x,c.x),y1=Math.min(s.y,c.y),y2=Math.max(s.y,c.y),cross=c.x<s.x;
   IT().forEach(it=>{const b=bboxOf(itemPrims(it));const inside=b.x>=x1&&b.x+b.w<=x2&&b.y>=y1&&b.y+b.h<=y2;const hit=!(b.x>x2||b.x+b.w<x1||b.y>y2||b.y+b.h<y1);if(cross?hit:inside)sel.add(it.id)});
-  renderItems();renderPane();return}
+  expandGroups();renderItems();renderPane();if(sel.size>1)toast(sel.size+' items selected – drag any of them to move all');return}
  if(d.mode==='rect'){$('#gDraft').innerHTML='';const s=d.start,c=d.cur||s;const w=Math.abs(c.x-s.x),h=Math.abs(c.y-s.y);if(w<2||h<2)return;
   addItem({k:'rect',style:toolArg||'solid',x:Math.min(s.x,c.x),y:Math.min(s.y,c.y),w,h,label:'',labelPos:toolArg==='dashed'?'top':'center'});setTool('select');tab='props';renderPane();focusField('label')}
 });
 svg.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);pinch=null;if(drag&&drag.before&&(drag.dx||drag.dy||drag.d||drag.moved))commit(drag.before);drag=null});
-svg.addEventListener('dblclick',e=>{
- if(tool==='line'&&draft){finishDraft();return}
- if(tool==='select'){const g=e.target.closest('[data-id]');if(!g)return;const it=byId(g.dataset.id);if(!it)return;
+function handleDouble(e){
+ if(tool==='line'&&draft){finishDraft();return true}
+ if(tool==='select'){const el=document.elementFromPoint(e.clientX,e.clientY),g=(el&&el.closest('[data-id]'))||e.target.closest('[data-id]');if(!g)return false;const it=byId(g.dataset.id);if(!it)return false;
   if(it.k==='line'){
    const w=toWorld(e);let bi=-1,bd=3;for(let i=1;i<it.pts.length;i++){const [ax,ay]=it.pts[i-1],[bx,by]=it.pts[i],dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((w.x-ax)*dx+(w.y-ay)*dy)/l2)),d=Math.hypot(ax+t*dx-w.x,ay+t*dy-w.y);if(d<bd){bd=d;bi=i}}
-   if(bi>0){pushHist();const sp=snapPt(w,new Set([it.id]));it.pts.splice(bi,0,[sp.x,sp.y]);renderItems()}}
+   if(bi>0){pushHist();const A=it.pts[bi-1],B=it.pts[bi],sp=snapPt(w,new Set([it.id]));
+    if(isHor(A,B)||isVer(A,B)){const hor=isHor(A,B),ax=hor?0:1,c=gr(hor?sp.x:sp.y),hw=Math.max(5,gr(15*px())),lo=Math.min(A[ax],B[ax]),hi=Math.max(A[ax],B[ax]);
+     const c1=Math.max(lo,c-hw),c2=Math.min(hi,c+hw),up=B[ax]>A[ax],q1=up?c1:c2,q2=up?c2:c1;
+     const p1=hor?[q1,A[1]]:[A[0],q1],p2=hor?[q2,A[1]]:[A[0],q2];
+     it.pts.splice(bi,0,p1,p2);cleanPts(it);sel=new Set([it.id]);renderItems();renderPane();toast('Bend point added – drag the new round handle sideways to make the bends')}
+    else{it.pts.splice(bi,0,[sp.x,sp.y]);renderItems()}}}
   else if(it.k==='opc'){const pr=opcPartner(it);if(pr)goTo(pr.sheet,pr.item.id)}
-  else{tab='props';renderPane();focusField(it.k==='text'?'text':it.k==='rect'?'label':it.k==='inst'?'num':'tag')}}
-});
+  else{if(!sel.has(it.id)){sel=new Set(groupOf(it.id));renderItems()}tab='props';renderPane();if(sel.size===1)focusField(it.k==='text'?'text':it.k==='rect'?'label':it.k==='inst'?'num':'tag')}
+  return true}
+ return false;
+}
+let lastDown={t:0,x:0,y:0};
 svg.addEventListener('wheel',e=>{e.preventDefault();const w=toWorld(e),k=Math.exp(e.deltaY*(e.ctrlKey?.01:.0015));const nw=Math.min(5000,Math.max(8,view.w*k)),r=nw/view.w;view.x=w.x-(w.x-view.x)*r;view.y=w.y-(w.y-view.y)*r;view.w=nw;setView()},{passive:false});
 new ResizeObserver(()=>setView()).observe($('#wrap'));
 
@@ -1264,10 +1510,12 @@ document.addEventListener('keydown',e=>{
   else if(k==='d'){e.preventDefault();dupSel()}
   else if(k==='c'){copySel()}
   else if(k==='v'){paste()}
+  else if(k==='g'){e.preventDefault();e.shiftKey?ungroupSel():groupSel()}
   else if(k==='a'){e.preventDefault();sel=new Set(IT().map(i=>i.id));selBlock=null;renderItems();renderPane()}
   return;
  }
  if(e.key===' '){spaceDown=true;svg.style.cursor='grab';e.preventDefault();return}
+ if(e.key==='Escape'&&(instDraft||tool==='pick')){instDraft=null;setTool(tool==='pick'?'select':tool,tool==='pick'?null:toolArg);return}
  if(e.key==='Escape'){if(draft){draft=null;$('#gDraft').innerHTML='';$('#finish').style.display='none'}else if(tool!=='select')setTool('select');else{sel.clear();selBlock=null;renderItems();renderPane()}return}
  if(e.key==='Enter'){finishDraft();return}
  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delSel();return}
@@ -1279,7 +1527,7 @@ document.addEventListener('keydown',e=>{
  const map={v:['select'],h:['pan'],p:['line','pipe'],l:['line','signal'],e:['line','elec'],i:['inst'],o:['opc'],t:['text'],q:['rect','solid'],b:['rect','dashed']};
  if(k==='r'&&sel.size){rotSel();return}
  if(k==='f'&&sel.size){flipSel();return}
- if(map[k])setTool(...map[k]);
+ if(map[k]){instPreset=null;setTool(...map[k])}
 });
 document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;setTool(tool,toolArg)}});
 
@@ -1288,7 +1536,7 @@ const LL_COLS=[['lineNo','Line no.',14],['desig','Designation',36],['size','Size
 function lineList(includeAll){
  const rows=[],byKey=new Map();
  D.sheets.forEach((sh,si)=>sh.items.forEach(it=>{
-  if(it.k!=='line')return;const st=it.style||'pipe';
+  if(it.k!=='line'||it.noList)return;const st=it.style||'pipe';
   if(!includeAll&&!PROCESS.has(st))return;
   const key=it.lineNo?'#'+String(it.lineNo).trim():'@'+it.id;let r=byKey.get(key);
   if(!r){r={lineNo:it.lineNo||'',desig:'',style:LS[st].n,sheets:new Set(),refs:[],conflict:[]};['size','medium','spec','from','to','dp','dt','tp','insul','remarks'].forEach(f=>r[f]='');r.tracing='';byKey.set(key,r);rows.push(r)}
@@ -1390,7 +1638,7 @@ function toMD(){
  const tags=D.sheets.flatMap(sh=>sh.items).filter(i=>(i.k==='sym'&&i.tag&&i.s!=='nozzle')||(i.k==='inst'&&i.num)).map(i=>i.k==='inst'?`${i.code}-${i.num}`:i.tag).sort();
  if(tags.length)s+=`\n**Tags:** ${tags.join(', ')}\n`;
  s+='\n## Drawing data\n\n<!-- Managed by the P&ID editor. Units: mm. Edit the tables above freely (except the line list); edit the JSON only if you know what you are doing. -->\n```json\n{"v":3,"sheets":[\n'
-  +D.sheets.map(sh=>`{"id":${JSON.stringify(sh.id)},"name":${JSON.stringify(sh.name)},"pos":${JSON.stringify(sh.pos||{})},"items":[\n`+sh.items.map(i=>JSON.stringify(i)).join(',\n')+'\n]}').join(',\n')+'\n]}\n```\n';
+  +D.sheets.map(sh=>`{"id":${JSON.stringify(sh.id)},"name":${JSON.stringify(sh.name)},${sh.format?`"format":${JSON.stringify(sh.format)},`:''}${sh.orient?`"orient":${JSON.stringify(sh.orient)},`:''}"pos":${JSON.stringify(sh.pos||{})},"items":[\n`+sh.items.map(i=>JSON.stringify(i)).join(',\n')+'\n]}').join(',\n')+'\n]}\n```\n';
  return s;
 }
 function fromMD(txt){
@@ -1408,7 +1656,7 @@ function fromMD(txt){
 /* ---------------- company format .md ---------------- */
 function formatToMD(){
  const c=D.company||{},m=D.meta;
- const fm={name:c.name||'',address:c.address||'',contact:c.contact||'',format:m.format,symScale:m.symScale,textScale:m.textScale,labelGap:m.labelGap,lineFmt:m.lineFmt,showLegend:m.showLegend,showNozzles:m.showNozzles};
+ const fm={name:c.name||'',address:c.address||'',contact:c.contact||'',format:m.format,orient:m.orient||'landscape',symScale:m.symScale,textScale:m.textScale,labelGap:m.labelGap,lineFmt:m.lineFmt,showLegend:m.showLegend,showNozzles:m.showNozzles};
  let s='---\n';Object.entries(fm).forEach(([k,v])=>s+=`${k}: ${JSON.stringify(v)}\n`);s+='---\n\n';
  s+=`# Company format – ${c.name||'(name)'}\n\nUsed by the P&ID editor: company details for the title block, and defaults for new projects.\nEdit the values above (between the --- lines) and the lists below.\n`;
  s+='\n## General notes\n\n'+notesMD(D.notes);
@@ -1419,7 +1667,7 @@ function formatFromMD(txt){
  const P_=mdParts(txt),fm=P_.fm;
  const nt=P_.sec('General notes'),pc=P_.sec('Pipe classes');
  return {company:{name:fm.name??fm.company??'',address:fm.address||'',contact:fm.contact||''},
-  defaults:Object.fromEntries(['format','symScale','textScale','labelGap','lineFmt','showLegend','showNozzles'].filter(k=>fm[k]!==undefined&&fm[k]!=='').map(k=>[k,fm[k]])),
+  defaults:Object.fromEntries(['format','orient','symScale','textScale','labelGap','lineFmt','showLegend','showNozzles'].filter(k=>fm[k]!==undefined&&fm[k]!=='').map(k=>[k,fm[k]])),
   notes:nt!==null?P_.bullets(nt):null,specs:pc!==null?P_.table(pc).map(([code='',desc='',rating='',material=''])=>({code,desc,rating,material})).filter(s=>s.code||s.desc):null};
 }
 const isEmptyProject=()=>D.sheets.every(s=>!s.items.length);
@@ -1593,10 +1841,10 @@ $('#exPdf').onclick=()=>{exportPDF(exIdx());$('#dlgExport').close()};
 $('#exDxf').onclick=()=>{exportDXF(exIdx());$('#dlgExport').close()};
 function exportPDF(idxs){
  if(!window.jspdf){alert('The PDF library did not load (no internet connection?).');return}
- const {jsPDF}=window.jspdf,[W,H]=sheet(),fmt=[Math.min(W,H),Math.max(W,H)],ori=W>H?'landscape':'portrait';
- const pdf=new jsPDF({orientation:ori,unit:'mm',format:fmt,compress:true});
+ const {jsPDF}=window.jspdf,dims=idxs.map(si=>dimsOf(D.sheets[si])),fmtA=d=>[Math.min(...d),Math.max(...d)],oriA=d=>d[0]>d[1]?'landscape':'portrait';
+ const pdf=new jsPDF({orientation:oriA(dims[0]),unit:'mm',format:fmtA(dims[0]),compress:true});
  idxs.forEach((si,n)=>{
-  if(n)pdf.addPage(fmt,ori);
+  if(n)pdf.addPage(fmtA(dims[n]),oriA(dims[n]));
   pdf.setLineCap('round');pdf.setLineJoin('round');pdf.setDrawColor(17,17,17);pdf.setTextColor(17,17,17);pdf.setFont('helvetica','normal');
   for(const p of withSheet(si,allPrims)){
    pdf.setLineWidth(p.w??.25);pdf.setLineDashPattern(p.dash||[],0);
@@ -1617,14 +1865,14 @@ function exportPDF(idxs){
  pdf.save(exportName()+(idxs.length===1&&D.sheets.length>1?'_sht'+(idxs[0]+1):'')+'.pdf');
 }
 function exportDXF(idxs){
- const [W,H]=sheet(),GAPX=100,o=[],g=(c,v)=>o.push(String(c),String(v));
+ const GAPX=100,o=[],g=(c,v)=>o.push(String(c),String(v));
  const n=v=>(+v).toFixed(3);
  const tx=s=>String(s).replace(/[\r\n]+/g,' ').replace(/[^\x20-\x7e]/g,ch=>'\\U+'+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0'));
  const LAY={FRAME:7,PIPE:7,SIGNAL:3,ELEC:5,BOUNDARY:8,SYMBOL:7,INST:4,TEXT:7,EQUIP:7};
  const lts=[];const ltName=d=>{if(!d)return null;const k=d.map(v=>+v.toFixed(3)).join(',');let i=lts.findIndex(x=>x.k===k);if(i<0){lts.push({k,d});i=lts.length-1}return 'PID'+(i+1)};
- const sets=idxs.map((si,k)=>({ox:k*(W+GAPX),prims:withSheet(si,allPrims)}));
+ let oxx=0;const sets=idxs.map(si=>{const [w,h]=dimsOf(D.sheets[si]);const st={ox:oxx,H:h,prims:withSheet(si,allPrims)};oxx+=w+GAPX;return st});
  sets.forEach(s=>s.prims.forEach(p=>p.lt=ltName(p.dash)));
- const XM=sets.length*(W+GAPX)-GAPX;
+ const XM=oxx-GAPX,H=Math.max(...sets.map(s=>s.H));
  g(0,'SECTION');g(2,'HEADER');g(9,'$ACADVER');g(1,'AC1009');g(9,'$INSBASE');g(10,0);g(20,0);g(30,0);g(9,'$EXTMIN');g(10,0);g(20,0);g(30,0);g(9,'$EXTMAX');g(10,XM);g(20,H);g(30,0);g(9,'$LIMMIN');g(10,0);g(20,0);g(9,'$LIMMAX');g(10,XM);g(20,H);g(9,'$LTSCALE');g(40,1);g(9,'$MEASUREMENT');g(70,1);g(0,'ENDSEC');
  g(0,'SECTION');g(2,'TABLES');
  g(0,'TABLE');g(2,'LTYPE');g(70,lts.length+1);
@@ -1637,8 +1885,8 @@ function exportDXF(idxs){
  g(0,'TABLE');g(2,'STYLE');g(70,1);g(0,'STYLE');g(2,'STANDARD');g(70,0);g(40,0);g(41,.85);g(50,0);g(71,0);g(42,2.5);g(3,'txt');g(4,'');g(0,'ENDTAB');
  g(0,'ENDSEC');
  g(0,'SECTION');g(2,'ENTITIES');
- for(const {ox,prims} of sets){
-  const X=x=>n(x+ox),Y=y=>n(H-y);
+ for(const {ox,H:Hs,prims} of sets){
+  const X=x=>n(x+ox),Y=y=>n(Hs-y);
   const ent=(type,p)=>{g(0,type);g(8,p.layer||'0');if(p.lt)g(6,p.lt)};
   const line=(p,x1,y1,x2,y2)=>{ent('LINE',p);g(10,X(x1));g(20,Y(y1));g(30,0);g(11,X(x2));g(21,Y(y2));g(31,0)};
   const solid=(p,a,b,c)=>{g(0,'SOLID');g(8,p.layer||'0');g(10,X(a[0]));g(20,Y(a[1]));g(30,0);g(11,X(b[0]));g(21,Y(b[1]));g(31,0);g(12,X(c[0]));g(22,Y(c[1]));g(32,0);g(13,X(c[0]));g(23,Y(c[1]));g(33,0)};
@@ -1668,21 +1916,21 @@ function exampleDoc(company){
  add({k:'rect',style:'dashed',x:150,y:40,w:760,h:760,label:'PUMP ROOM',labelPos:'top'});
  sy('nozzle',130,700,{tag:'A'});ln('pipe',[[134,700],[227,700]],{lineNo:'001',size:'DN300',...FW,from:'Nozzle A',to:'Pump P-101'});
  sy('gate_no',170,700);sy('reducer_e',205,700);
- ln('small',[[187.5,700],[187.5,687.5]]);add({k:'inst',code:'PI',num:'',x:187.5,y:684.9});
+ add({k:'inst',code:'PI',num:'',x:187.5,y:680,link:{x:187.5,y:700,dir:'v'},linkStyle:'process'});
  sy('pump',230,700,{tag:'P-101',tagPos:'left',attached:true});
- add({k:'rect',style:'equip',x:205,y:730,w:55,h:22,label:'DRIVER'});
- ln('small',[[230,703.8],[230,730]]);
+ sy('diesel',230,741,{sz:250,tag:'DIESEL ENGINE',tagPos:'left'});
+ ln('small',[[230,703.8],[230,732.25]]);
  ln('pipe',[[233.6,697],[262.5,697],[262.5,620],[915,620]],{lineNo:'002',size:'DN300',...FW,from:'Pump P-101',to:'Nozzle C'});
  sy('check_disc',262.5,670,{rot:270});sy('gate_no',262.5,645,{rot:90});
- ln('small',[[300,620],[300,608.3]]);add({k:'inst',code:'PS',num:'001',x:300,y:605});
+ add({k:'inst',code:'PS',num:'001',x:300,y:600,link:{x:300,y:620,dir:'v'},linkStyle:'process'});
  ln('pipe',[[340,620],[340,600]],{lineNo:'003',size:'DN300',...FW,from:'Line 002',to:'Nozzle F'});sy('relief',340,597,{tag:'PRV-1',tagPos:'left'});ln('pipe',[[343,597],[380,597],[380,505]],{lineNo:'003',size:'DN300',...FW,from:'Line 002',to:'Nozzle F'});sy('nozzle',380,501,{tag:'F',rot:270});
  ln('pipe',[[450,620],[450,505]],{lineNo:'004',size:'DN250',...FW,from:'Line 002',to:'Nozzle E'});sy('gate_nc',450,570,{rot:90});sy('nozzle',450,501,{tag:'E',rot:270});
  sy('gate_no',540,620);sy('flowarrow',565,620);sy('nozzle',919,620,{tag:'C'});
  add({k:'rect',style:'solid',x:600,y:660,w:120,h:95,label:'CONTROL PANEL',labelPos:'top'});
- ln('signal',[[302.6,605],[310,605],[310,640],[640,640],[640,660]]);
- ln('elec',[[260,741],[600,741]],{label:'start / stop'});
+ ln('signal',[[302.6,600],[310,600],[310,640],[640,640],[640,660]]);
+ ln('elec',[[242.5,741],[600,741]],{label:'start / stop'});
  const FU={lineNo:'010',size:'DN25',medium:'DF',spec:'B1',from:'Fuel tank',to:'Driver'};
- ln('small',[[350,775],[240,775],[240,752]],FU);sy('sol_nc',290,775,{tag:'Y1'});
+ ln('small',[[350,775],[240,775],[240,749.75]],FU);sy('sol_nc',290,775,{tag:'Y1'});
  add({k:'opc',ref:'1',dir:'in',rot:0,x:355,y:775,attached:true});
  d.sheets=[{id:uid(),name:'Pump set',items:I,pos:{}}];
  ({I,add,ln,sy}=mk());
@@ -1706,10 +1954,9 @@ $('#finish').onclick=finishDraft;
 $('#btnLeft').onclick=()=>{$('#left').classList.toggle('open');$('#right').classList.remove('open')};
 $('#btnRight').onclick=()=>{$('#right').classList.toggle('open');$('#left').classList.remove('open')};
 addEventListener('beforeunload',e=>{if(file.dirty){e.preventDefault();e.returnValue=''}});
-buildTools();
 (()=>{let s=null;try{s=JSON.parse(lsGet('pid.draft')||'null')}catch{}
  if(s&&s.D){D=normalize(s.D);file=s.file||{path:null,sha:null,dirty:false};cs=Math.min(s.cs||0,D.sheets.length-1)}else D=normalize(newDoc());
- renderAll();setTool('select');requestAnimationFrame(fit);
+ buildTools();renderAll();setTool('select');requestAnimationFrame(fit);
 })();
 </script>
 </body>
